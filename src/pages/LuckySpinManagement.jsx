@@ -51,30 +51,50 @@ const topCards = [
 ];
 
 
-// DRY Modal component for Add/Edit
+// DRY Modal component for Add/Edit/Spin Sequence
 const SpinItemModal = ({ open, setOpen, mode = "add", initialData = {} }) => (
     <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50" />
             <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-xl shadow-lg p-8 w-[400px] flex flex-col items-center border border-gray-700">
                 <img src={SpinItemsIcon} alt="Spin Items" className="h-12 mb-4" />
-                <h2 className="text-white text-xl font-semibold mb-6">{mode === "add" ? "Add New Spin Items" : "Edit Spin Item"}</h2>
-                <form className="w-full flex flex-col gap-6">
-                    <div>
-                        <label className="text-gray-300 text-sm mb-2 block">Reward Name :</label>
-                        <input type="text" defaultValue={initialData.name || ""} className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" />
-                    </div>
-                    <div>
-                        <label className="text-gray-300 text-sm mb-2 block">Image</label>
-                        <div className="border-2 border-dashed border-gray-600 rounded-lg h-32 flex items-center justify-center bg-gray-900">
-                            <img src={initialData.image || ImageIcon} alt="Upload" className="h-10" />
+                <h2 className="text-white text-xl font-semibold mb-6">
+                    {mode === "add" ? "Add New Spin Items" : mode === "edit" ? "Edit Spin Item" : "Spin Sequence Settings"}
+                </h2>
+                {mode === "sequence" ? (
+                    <div className="w-full flex flex-col gap-6">
+                        {/* Example content for Spin Sequence Settings */}
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Sequence Name :</label>
+                            <input type="text" className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                        </div>
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Description</label>
+                            <textarea className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" rows={3} />
+                        </div>
+                        <div className="flex justify-end gap-4 mt-2">
+                            <button type="button" className="bg-white text-red-500 px-4 py-1 rounded" onClick={() => setOpen(false)}>Cancel</button>
+                            <button type="button" className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-4 py-1 rounded font-bold">Confirm</button>
                         </div>
                     </div>
-                    <div className="flex justify-end gap-4 mt-2">
-                        <button type="button" className="bg-white text-red-500 px-4 py-1 rounded" onClick={() => setOpen(false)}>Cancel</button>
-                        <button type="submit" className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-4 py-1 rounded font-bold">Confirm</button>
-                    </div>
-                </form>
+                ) : (
+                    <form className="w-full flex flex-col gap-6">
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Reward Name :</label>
+                            <input type="text" defaultValue={initialData.name || ""} className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                        </div>
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Image</label>
+                            <div className="border-2 border-dashed border-gray-600 rounded-lg h-32 flex items-center justify-center bg-gray-900">
+                                <img src={initialData.image || ImageIcon} alt="Upload" className="h-10" />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-4 mt-2">
+                            <button type="button" className="bg-white text-red-500 px-4 py-1 rounded" onClick={() => setOpen(false)}>Cancel</button>
+                            <button type="submit" className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-4 py-1 rounded font-bold">Confirm</button>
+                        </div>
+                    </form>
+                )}
             </Dialog.Content>
         </Dialog.Portal>
     </Dialog.Root>
@@ -83,6 +103,7 @@ const SpinItemModal = ({ open, setOpen, mode = "add", initialData = {} }) => (
 const LuckySpinManagement = () => {
     const [addOpen, setAddOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
+    const [sequenceOpen, setSequenceOpen] = useState(false);
     const [editData, setEditData] = useState({});
 
     return (
@@ -105,32 +126,34 @@ const LuckySpinManagement = () => {
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-semibold text-white">Spin Items Panel Table</h2>
                         <div className="flex items-center gap-2">
-                            <button className="bg-yellow-100 text-yellow-600 px-3 py-1 rounded text-xs font-bold">Spin Sequence Setting</button>
+                            <button className="bg-yellow-100 text-yellow-600 px-3 py-1 rounded text-xs font-bold" onClick={() => setSequenceOpen(true)}>Spin Sequence Setting</button>
                             <button className="bg-yellow-500 text-black px-4 py-1 rounded text-xs font-bold" onClick={() => setAddOpen(true)}>Add</button>
                         </div>
                     </div>
                     <table className="w-full rounded overflow-hidden">
                         <thead>
                             <tr className="bg-black text-white">
-                                <th className="text-left py-3 px-4 font-medium">Reward Name</th>
-                                <th className="text-left py-3 px-4 font-medium">Item Image</th>
-                                <th className="text-left py-3 px-4 font-medium">Status</th>
+                                <th className="text-left py-3 px-4 font-medium w-2/5">Reward Name</th>
+                                <th className="text-center py-3 px-4 font-medium w-1/5">Item Image</th>
+                                <th className="text-right py-3 px-4 font-medium w-2/5">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {spinItems.map((item, idx) => (
                                 <tr key={idx} className="border-b border-gray-800 bg-gray-900">
-                                    <td className="py-3 px-4 text-gray-200">
+                                    <td className="py-3 px-4 text-gray-200 text-left">
                                         {item.name}
                                     </td>
-                                    <td className="py-3 px-4">
-                                        {item.image.endsWith('.png') || item.image.endsWith('.svg') ? (
-                                            <img src={item.image} alt={item.name} className="h-10 mx-auto" />
-                                        ) : (
-                                            <span className="text-gray-400">{item.image}</span>
-                                        )}
+                                    <td className="py-3 px-4 text-center">
+                                        <div className="flex items-center justify-center h-full">
+                                            {item.image.endsWith('.png') || item.image.endsWith('.svg') ? (
+                                                <img src={item.image} alt={item.name} className="h-10 object-contain" />
+                                            ) : (
+                                                <span className="text-gray-400">{item.image}</span>
+                                            )}
+                                        </div>
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3 px-4 text-right">
                                         <button className="bg-green-500 text-white px-4 py-1 rounded mr-2" onClick={() => { setEditData(item); setEditOpen(true); }}>Edit</button>
                                         <button className="bg-black border border-red-400 text-red-500 px-4 py-1 rounded">Delete</button>
                                     </td>
@@ -141,6 +164,7 @@ const LuckySpinManagement = () => {
                 </div>
                 <SpinItemModal open={addOpen} setOpen={setAddOpen} mode="add" />
                 <SpinItemModal open={editOpen} setOpen={setEditOpen} mode="edit" initialData={editData} />
+                <SpinItemModal open={sequenceOpen} setOpen={setSequenceOpen} mode="sequence" />
             </div>
         </div>
     );
