@@ -1,8 +1,10 @@
 import AchievementPage from "@/pages/AchievementPage";
 import CheckinPage from "@/pages/CheckinPage";
+import Dashboard from "@/pages/Dashboard";
 import HistoryPage from "@/pages/HistoryPage";
 import HomePage from "@/pages/HomePage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
+import LuckySpinManagement from "@/pages/LuckySpinManagement";
 import LuckySpinPage from "@/pages/LuckySpinPage";
 import ProfilePage from "@/pages/ProfilePage";
 import RedeemPage from "@/pages/RedeemPage";
@@ -16,6 +18,14 @@ const routes = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+  },
+  {
+    path: "/dashboard",
+    element: <Dashboard />,
+  },
+  {
+    path: "/luckySpinManagement",
+    element: <LuckySpinManagement />,
   },
   {
     path: "/check-in",
