@@ -1,0 +1,458 @@
+{
+	"id": "96ecacbe-19ef-485c-ad8a-27aff3f06b53",
+	"name": "MRS Staging API",
+	"timestamp": "2025-08-18T05:14:09.727Z",
+	"collection_id": "12584754-fb086b56-6dbd-4d84-8d8b-88c7e149c026",
+	"folder_id": 0,
+	"environment_id": "12584754-9d8bea40-685a-474d-99b2-ace539a9820b",
+	"totalPass": 2,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2025-08-18T05:14:05.983Z",
+	"totalFail": 0,
+	"results": [
+		{
+			"id": "ffab62df-6768-4d6e-985f-f3946abe7455",
+			"name": "Login: Admin Access Token",
+			"url": "https://staging-api.menangsininow.com/login/admin-access-token/",
+			"time": 1071,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Got some token back": true
+			},
+			"testPassFailCounts": {
+				"Got some token back": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				1071
+			],
+			"allTests": [
+				{
+					"Got some token back": true
+				}
+			]
+		},
+		{
+			"id": "16979c7c-9c5d-499f-8a90-e59f672b7a8a",
+			"name": "Login: Refresh Token",
+			"url": "https://staging-api.menangsininow.com/login/refresh-token/",
+			"time": 111,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Access token updated": true
+			},
+			"testPassFailCounts": {
+				"Access token updated": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				111
+			],
+			"allTests": [
+				{
+					"Access token updated": true
+				}
+			]
+		},
+		{
+			"id": "f2c36795-f758-4073-ab07-e3b3134903f2",
+			"name": "Login: Verify Token",
+			"url": "https://staging-api.menangsininow.com/login/verify-token/",
+			"time": 108,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				108
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "36257ecc-fcda-4de9-85f8-ba668b51d27b",
+			"name": "Login: Logout",
+			"url": "https://staging-api.menangsininow.com/login/logout/",
+			"time": 116,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				116
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f0d7ef66-0b8a-4f20-b3b9-45c39511d758",
+			"name": "Lucky Spin Items: List",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-items/",
+			"time": 112,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				112
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "293cf9c6-a75a-45d2-8ea3-f9bc15ab442f",
+			"name": "Lucky Spin Items: Retrieve by UUID",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-items/44d3c4ee-fd79-4e7e-8510-3da193cab423/",
+			"time": 119,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				119
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "3f850383-e03d-4779-a63a-420daf519278",
+			"name": "Lucky Spin Items: Create",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-items/",
+			"time": 109,
+			"responseCode": {
+				"code": 201,
+				"name": "Created"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				109
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "56233199-25b0-4ec1-9952-3e004a4598f1",
+			"name": "Lucky Spin Items: Create (multipart with image)",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-items/",
+			"time": 109,
+			"responseCode": {
+				"code": 201,
+				"name": "Created"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				109
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "8e7e27e0-b002-440d-abbe-cc5aa7036b4b",
+			"name": "Lucky Spin Items: Update by UUID",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-items/44d3c4ee-fd79-4e7e-8510-3da193cab423/",
+			"time": 110,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				110
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "fae584b7-db21-4d21-b398-9df033c61800",
+			"name": "Lucky Spin Items: Archive",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-items/44d3c4ee-fd79-4e7e-8510-3da193cab423/archive/",
+			"time": 119,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				119
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b442168c-dd11-4e53-afa0-2d2604a0e3de",
+			"name": "Lucky Spin Sequences: List",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-sequences/",
+			"time": 130,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				130
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "267d8544-3b9f-4d84-ae6e-f6d0e0306fe6",
+			"name": "Lucky Spin Sequences: Retrieve by UUID",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-sequences/99de0b0f-dfd1-4a0e-8f60-c75b85a1e642",
+			"time": 109,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				109
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b4cd6fbb-ba8a-4261-b423-a88e46856bcc",
+			"name": "Lucky Spin Sequences: Create",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-sequences/",
+			"time": 110,
+			"responseCode": {
+				"code": 201,
+				"name": "Created"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				110
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "71df9555-8a50-448e-b45f-6a3692d27812",
+			"name": "Lucky Spin Sequences: Delete by UUID",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-sequences/99de0b0f-dfd1-4a0e-8f60-c75b85a1e642/",
+			"time": 105,
+			"responseCode": {
+				"code": 204,
+				"name": "No Content"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				105
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "3592e93b-8de1-45b8-97cc-e441f1618c7d",
+			"name": "Lucky Spin Sequences: Bulk Reorder",
+			"url": "https://staging-api.menangsininow.com/lucky-spin/lucky-spin-sequences/change-spin-sequences/",
+			"time": 107,
+			"responseCode": {
+				"code": 405,
+				"name": "Method Not Allowed"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				107
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "b6f638ad-127a-4847-b89a-373ac0cf8be6",
+			"name": "Members: List",
+			"url": "https://staging-api.menangsininow.com/member/members",
+			"time": 118,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				118
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "ec04140c-3739-4641-9772-1e30e3a613da",
+			"name": "Members: Retrieve by UUID",
+			"url": "https://staging-api.menangsininow.com/member/members/",
+			"time": 115,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				115
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "582c7315-7457-4ebb-9dbf-56c67163c297",
+			"name": "Spin: One Spin for Member",
+			"url": "https://staging-api.menangsininow.com/member//one-spin",
+			"time": 91,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				91
+			],
+			"allTests": [
+				{}
+			]
+		},
+		{
+			"id": "f5c231db-a87c-41dc-b407-f48e6734a14f",
+			"name": "Spin: Ten Spins for Member",
+			"url": "https://staging-api.menangsininow.com/member//ten-spin",
+			"time": 94,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				94
+			],
+			"allTests": [
+				{}
+			]
+		}
+	],
+	"count": 1,
+	"totalTime": 3063,
+	"collection": {
+		"requests": [
+			{
+				"id": "ffab62df-6768-4d6e-985f-f3946abe7455",
+				"method": "POST"
+			},
+			{
+				"id": "16979c7c-9c5d-499f-8a90-e59f672b7a8a",
+				"method": "POST"
+			},
+			{
+				"id": "f2c36795-f758-4073-ab07-e3b3134903f2",
+				"method": "POST"
+			},
+			{
+				"id": "36257ecc-fcda-4de9-85f8-ba668b51d27b",
+				"method": "POST"
+			},
+			{
+				"id": "f0d7ef66-0b8a-4f20-b3b9-45c39511d758",
+				"method": "GET"
+			},
+			{
+				"id": "293cf9c6-a75a-45d2-8ea3-f9bc15ab442f",
+				"method": "GET"
+			},
+			{
+				"id": "3f850383-e03d-4779-a63a-420daf519278",
+				"method": "POST"
+			},
+			{
+				"id": "56233199-25b0-4ec1-9952-3e004a4598f1",
+				"method": "POST"
+			},
+			{
+				"id": "8e7e27e0-b002-440d-abbe-cc5aa7036b4b",
+				"method": "PUT"
+			},
+			{
+				"id": "fae584b7-db21-4d21-b398-9df033c61800",
+				"method": "PATCH"
+			},
+			{
+				"id": "b442168c-dd11-4e53-afa0-2d2604a0e3de",
+				"method": "GET"
+			},
+			{
+				"id": "267d8544-3b9f-4d84-ae6e-f6d0e0306fe6",
+				"method": "GET"
+			},
+			{
+				"id": "b4cd6fbb-ba8a-4261-b423-a88e46856bcc",
+				"method": "POST"
+			},
+			{
+				"id": "71df9555-8a50-448e-b45f-6a3692d27812",
+				"method": "DELETE"
+			},
+			{
+				"id": "3592e93b-8de1-45b8-97cc-e441f1618c7d",
+				"method": "PATCH"
+			},
+			{
+				"id": "b6f638ad-127a-4847-b89a-373ac0cf8be6",
+				"method": "GET"
+			},
+			{
+				"id": "ec04140c-3739-4641-9772-1e30e3a613da",
+				"method": "GET"
+			},
+			{
+				"id": "582c7315-7457-4ebb-9dbf-56c67163c297",
+				"method": "POST"
+			},
+			{
+				"id": "f5c231db-a87c-41dc-b407-f48e6734a14f",
+				"method": "POST"
+			}
+		]
+	}
+}

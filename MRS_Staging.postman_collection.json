@@ -1,0 +1,560 @@
+{
+  "info": {
+    "name": "MRS Staging API",
+    "_postman_id": "2a2f08c9-ae0b-4099-a083-3125a7e61489",
+    "description": "Postman collection for MRS (staging) endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://staging-api.menangsininow.com",
+      "type": "string"
+    },
+    {
+      "key": "member_uuid",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "item_uuid",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sequence_uuid",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Login",
+      "item": [
+        {
+          "name": "Login: Admin Access Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/login/admin-access-token/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login",
+                "admin-access-token"
+              ]
+            },
+            "description": "Returns access/refresh tokens on success.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const access = json.access || json.token || (json.data && json.data.access) || '';",
+                  "const refresh = json.refresh || (json.data && json.data.refresh) || '';",
+                  "if (access) { pm.environment.set('access_token', access); }",
+                  "if (refresh) { pm.environment.set('refresh_token', refresh); }",
+                  "pm.test('Got some token back', function(){ pm.expect(access || refresh).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login: Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/login/refresh-token/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login",
+                "refresh-token"
+              ]
+            },
+            "description": "Exchanges a refresh token for a new access token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const access = json.access || json.token || (json.data && json.data.access) || '';",
+                  "if (access) { pm.environment.set('access_token', access); }",
+                  "pm.test('Access token updated', function(){ pm.expect(access).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login: Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/login/verify-token/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login",
+                "verify-token"
+              ]
+            },
+            "description": "Verifies an access token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{access_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login: Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/login/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login",
+                "logout"
+              ]
+            },
+            "description": "Invalidates the given refresh token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lucky Spin Items",
+      "item": [
+        {
+          "name": "Lucky Spin Items: List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-items/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-items"
+              ]
+            },
+            "description": "List all lucky spin items."
+          }
+        },
+        {
+          "name": "Lucky Spin Items: Retrieve by UUID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-items/{{item_uuid}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-items",
+                "{{item_uuid}}"
+              ]
+            },
+            "description": "Get a single item by UUID."
+          }
+        },
+        {
+          "name": "Lucky Spin Items: Create",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-items/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-items"
+              ]
+            },
+            "description": "Create a new item. If unlimited is true, quantity may be null.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reward_name\": \"Gold Coin\",\n  \"probability\": 0.25,\n  \"unlimited\": false,\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Lucky Spin Items: Create (multipart with image)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-items/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-items"
+              ]
+            },
+            "description": "Create a new item with image. Attach a file for 'image'.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "reward_name",
+                  "type": "text",
+                  "value": "Gold Coin"
+                },
+                {
+                  "key": "probability",
+                  "type": "text",
+                  "value": "0.25"
+                },
+                {
+                  "key": "unlimited",
+                  "type": "text",
+                  "value": "false"
+                },
+                {
+                  "key": "quantity",
+                  "type": "text",
+                  "value": "10"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lucky Spin Items: Update by UUID",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-items/{{item_uuid}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-items",
+                "{{item_uuid}}"
+              ]
+            },
+            "description": "Update an existing item. If unlimited is true, quantity can be null.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reward_name\": \"Platinum Coin\",\n  \"probability\": 0.1,\n  \"unlimited\": true,\n  \"quantity\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Lucky Spin Items: Archive",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-items/{{item_uuid}}/archive/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-items",
+                "{{item_uuid}}",
+                "archive"
+              ]
+            },
+            "description": "Archive an item."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lucky Spin Sequences",
+      "item": [
+        {
+          "name": "Lucky Spin Sequences: List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-sequences/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-sequences"
+              ]
+            },
+            "description": "List sequence entries."
+          }
+        },
+        {
+          "name": "Lucky Spin Sequences: Retrieve by UUID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-sequences/{{sequence_uuid}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-sequences",
+                "{{sequence_uuid}}"
+              ]
+            },
+            "description": "Get a sequence entry by UUID."
+          }
+        },
+        {
+          "name": "Lucky Spin Sequences: Create",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-sequences/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-sequences"
+              ]
+            },
+            "description": "Create a sequence entry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_order\": 1,\n  \"item_uuid\": \"{{item_uuid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Lucky Spin Sequences: Delete by UUID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-sequences/{{sequence_uuid}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-sequences",
+                "{{sequence_uuid}}"
+              ]
+            },
+            "description": "Delete a sequence entry."
+          }
+        },
+        {
+          "name": "Lucky Spin Sequences: Bulk Reorder",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lucky-spin/lucky-spin-sequences/change-spin-sequences/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lucky-spin",
+                "lucky-spin-sequences",
+                "change-spin-sequences"
+              ]
+            },
+            "description": "Bulk reorder items.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lucky_spins\": [\n    {\n      \"item_order\": 1,\n      \"sequence_UUID\": \"{{sequence_uuid}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Members + Spin",
+      "item": [
+        {
+          "name": "Members: List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/member/members/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "member",
+                "members"
+              ]
+            },
+            "description": "List members."
+          }
+        },
+        {
+          "name": "Members: Retrieve by UUID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/member/members/{{member_uuid}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "member",
+                "members",
+                "{{member_uuid}}"
+              ]
+            },
+            "description": "Get a member by UUID."
+          }
+        },
+        {
+          "name": "Spin: One Spin for Member",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/member/{{member_uuid}}/one-spin/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "member",
+                "{{member_uuid}}",
+                "one-spin"
+              ]
+            },
+            "description": "Perform one spin for a member."
+          }
+        },
+        {
+          "name": "Spin: Ten Spins for Member",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/member/{{member_uuid}}/ten-spin/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "member",
+                "{{member_uuid}}",
+                "ten-spin"
+              ]
+            },
+            "description": "Perform ten spins for a member."
+          }
+        }
+      ]
+    }
+  ]
+}
