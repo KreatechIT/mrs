@@ -21,8 +21,8 @@ export * from './auth';
 // Export errors
 export * from './errors';
 
-// Services will be exported here once implemented
-// export * from './services';
+// Export services
+export * from './services';
 
 // Utils will be exported here once implemented  
 // export * from './utils';

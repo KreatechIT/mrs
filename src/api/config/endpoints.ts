@@ -39,10 +39,10 @@ export const SPIN_SEQUENCE_ENDPOINTS = {
 
 // Member Endpoints
 export const MEMBER_ENDPOINTS = {
-  LIST: '/members/',
-  DETAIL: (uuid: string) => `/members/${uuid}/`,
-  SINGLE_SPIN: (uuid: string) => `/members/${uuid}/spin/`,
-  TEN_SPINS: (uuid: string) => `/members/${uuid}/ten-spins/`,
+  LIST: '/member/members/',
+  DETAIL: (uuid: string) => `/member/members/${uuid}/`,
+  SINGLE_SPIN: (uuid: string) => `/member/${uuid}/one-spin/`,
+  TEN_SPINS: (uuid: string) => `/member/${uuid}/ten-spin/`,
 } as const;
 
 // All Endpoints Combined
