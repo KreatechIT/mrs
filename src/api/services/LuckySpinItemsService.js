@@ -83,6 +83,8 @@ export class LuckySpinItemsService {
 
       if (featureFlags.enableRequestLogging) {
         console.log(`🎰 Creating lucky spin item: ${itemData.reward_name}`);
+        console.log('📝 Request data:', JSON.stringify(itemData, null, 2));
+        console.log('🔗 Endpoint:', LUCKY_SPIN_ITEMS_ENDPOINTS.CREATE);
       }
 
       const response = await apiClient.post(
@@ -100,6 +102,11 @@ export class LuckySpinItemsService {
     } catch (error) {
       if (featureFlags.enableRequestLogging) {
         console.error(`❌ Failed to create lucky spin item:`, error);
+        console.error('📝 Request data was:', JSON.stringify(itemData, null, 2));
+        if (error.response) {
+          console.error('📋 Response status:', error.response.status);
+          console.error('📋 Response data:', error.response.data);
+        }
       }
       throw this.handleServiceError(error, 'Failed to create lucky spin item');
     }

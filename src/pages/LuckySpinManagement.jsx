@@ -6,7 +6,7 @@ import UserLogs from "@/assets/images/icons/user-logs.png";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import SpinItemsIcon from "@/assets/images/icons/spin-items-panel.png";
 import ImageIcon from "@/assets/images/icons/image-upload.png";
@@ -56,54 +56,336 @@ const topCards = [
 ];
 
 
-// DRY Modal component for Add/Edit/Spin Sequence
-const SpinItemModal = ({ open, setOpen, mode = "add", initialData = {} }) => (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-        <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-xl shadow-lg p-8 w-[400px] flex flex-col items-center border border-gray-700">
-                <img src={SpinItemsIcon} alt="Spin Items" className="h-12 mb-4" />
-                <h2 className="text-white text-xl font-semibold mb-6">
-                    {mode === "add" ? "Add New Spin Items" : mode === "edit" ? "Edit Spin Item" : "Spin Sequence Settings"}
-                </h2>
-                {mode === "sequence" ? (
-                    <div className="w-full flex flex-col gap-6">
-                        {/* Example content for Spin Sequence Settings */}
-                        <div>
-                            <label className="text-gray-300 text-sm mb-2 block">Sequence Name :</label>
-                            <input type="text" className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" />
-                        </div>
-                        <div>
-                            <label className="text-gray-300 text-sm mb-2 block">Description</label>
-                            <textarea className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" rows={3} />
-                        </div>
-                        <div className="flex justify-end gap-4 mt-2">
-                            <button type="button" className="bg-white text-red-500 px-4 py-1 rounded" onClick={() => setOpen(false)}>Cancel</button>
-                            <button type="button" className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-4 py-1 rounded font-bold">Confirm</button>
-                        </div>
-                    </div>
-                ) : (
-                    <form className="w-full flex flex-col gap-6">
-                        <div>
-                            <label className="text-gray-300 text-sm mb-2 block">Reward Name :</label>
-                            <input type="text" defaultValue={initialData.name || ""} className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" />
-                        </div>
-                        <div>
-                            <label className="text-gray-300 text-sm mb-2 block">Image</label>
-                            <div className="border-2 border-dashed border-gray-600 rounded-lg h-32 flex items-center justify-center bg-gray-900">
-                                <img src={initialData.image || ImageIcon} alt="Upload" className="h-10" />
+// Enhanced Modal component for Add/Edit/Spin Sequence with full functionality
+const SpinItemModal = ({ open, setOpen, mode = "add", initialData = {}, onSubmit, loading: modalLoading = false }) => {
+    const [formData, setFormData] = useState({
+        reward_name: '',
+        probability: 0.1,
+        unlimited: false,
+        quantity: 1,
+        image: null
+    });
+    const [imagePreview, setImagePreview] = useState(null);
+    const [dragActive, setDragActive] = useState(false);
+    const [formErrors, setFormErrors] = useState({});
+    const fileInputRef = useRef(null);
+
+    // Initialize form data when modal opens or initialData changes
+    useEffect(() => {
+        if (open) {
+            if (mode === "edit" && initialData) {
+                setFormData({
+                    reward_name: initialData.reward_name || '',
+                    probability: typeof initialData.probability === 'string' ? parseFloat(initialData.probability) : (initialData.probability || 0.1),
+                    unlimited: initialData.unlimited || false,
+                    quantity: initialData.quantity || 1,
+                    image: null // Don't set existing image in form, will be handled separately
+                });
+                // Set image preview if existing image exists
+                setImagePreview(initialData.image || null);
+            } else {
+                setFormData({
+                    reward_name: '',
+                    probability: 0.1,
+                    unlimited: false,
+                    quantity: 1,
+                    image: null
+                });
+                setImagePreview(null);
+            }
+            setFormErrors({});
+        }
+    }, [open, mode, initialData?.uuid]); // Only depend on the UUID to avoid object reference issues
+
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        // Clear error when user starts typing
+        if (formErrors[field]) {
+            setFormErrors(prev => ({ ...prev, [field]: null }));
+        }
+    };
+
+    const handleImageDrop = useCallback((e) => {
+        e.preventDefault();
+        setDragActive(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files[0]) {
+            handleImageFile(files[0]);
+        }
+    }, []);
+
+    const handleImageFile = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            setFormData(prev => ({ ...prev, image: file }));
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => setImagePreview(e.target.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const validateForm = () => {
+        const errors = {};
+        
+        if (!formData.reward_name.trim()) {
+            errors.reward_name = 'Reward name is required';
+        }
+        
+        // Check for valid probability number
+        const prob = parseFloat(formData.probability);
+        if (isNaN(prob) || prob <= 0 || prob > 1) {
+            errors.probability = 'Probability must be a valid number between 0.01 and 1';
+        }
+        
+        // Quantity validation only when not unlimited
+        if (!formData.unlimited) {
+            const qty = parseInt(formData.quantity);
+            if (isNaN(qty) || qty <= 0) {
+                errors.quantity = 'Quantity must be a positive integer when not unlimited';
+            }
+        }
+        
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
+        
+        const submitData = {
+            reward_name: formData.reward_name.trim(),
+            probability: parseFloat(formData.probability),
+            unlimited: formData.unlimited,
+            quantity: formData.unlimited ? null : parseInt(formData.quantity)
+        };
+        
+        await onSubmit(submitData, formData.image);
+    };
+
+    const handleDrag = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") {
+            setDragActive(true);
+        } else if (e.type === "dragleave") {
+            setDragActive(false);
+        }
+    }, []);
+
+    if (mode === "sequence") {
+        return (
+            <Dialog.Root open={open} onOpenChange={setOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50" />
+                    <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-xl shadow-lg p-8 w-[400px] flex flex-col items-center border border-gray-700">
+                        <Dialog.Title asChild>
+                            <h2 className="text-white text-xl font-semibold mb-6">Spin Sequence Settings</h2>
+                        </Dialog.Title>
+                        <Dialog.Description className="text-gray-300 text-sm mb-4 text-center">
+                            Configure the sequence settings for the lucky spin feature.
+                        </Dialog.Description>
+                        <img src={SpinItemsIcon} alt="Spin Items" className="h-12 mb-4" />
+                        <div className="w-full flex flex-col gap-6">
+                            <div>
+                                <label className="text-gray-300 text-sm mb-2 block">Sequence Name :</label>
+                                <input type="text" className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                            </div>
+                            <div>
+                                <label className="text-gray-300 text-sm mb-2 block">Description</label>
+                                <textarea className="w-full bg-transparent border border-yellow-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" rows={3} />
+                            </div>
+                            <div className="flex justify-end gap-4 mt-2">
+                                <button type="button" className="bg-white text-red-500 px-4 py-1 rounded" onClick={() => setOpen(false)}>Cancel</button>
+                                <button type="button" className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-4 py-1 rounded font-bold">Confirm</button>
                             </div>
                         </div>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+        );
+    }
+
+    return (
+        <Dialog.Root open={open} onOpenChange={setOpen}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-xl shadow-lg p-8 w-[500px] flex flex-col items-center border border-gray-700 max-h-[90vh] overflow-y-auto">
+                    <Dialog.Title asChild>
+                        <h2 className="text-white text-xl font-semibold mb-6">
+                            {mode === "add" ? "Add New Spin Item" : "Edit Spin Item"}
+                        </h2>
+                    </Dialog.Title>
+                    <Dialog.Description className="text-gray-300 text-sm mb-4 text-center">
+                        {mode === "add" ? "Create a new spin item with custom rewards and probabilities." : "Update the selected spin item settings and properties."}
+                    </Dialog.Description>
+                    <img src={SpinItemsIcon} alt="Spin Items" className="h-12 mb-4" />
+                    
+                    <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+                        {/* Reward Name */}
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Reward Name *</label>
+                            <input 
+                                type="text" 
+                                value={formData.reward_name}
+                                onChange={(e) => handleInputChange('reward_name', e.target.value)}
+                                className={`w-full bg-transparent border rounded px-3 py-2 text-white focus:outline-none focus:ring-2 ${
+                                    formErrors.reward_name ? 'border-red-500 focus:ring-red-500' : 'border-yellow-700 focus:ring-yellow-500'
+                                }`}
+                                placeholder="Enter reward name"
+                                disabled={modalLoading}
+                            />
+                            {formErrors.reward_name && <p className="text-red-400 text-xs mt-1">{formErrors.reward_name}</p>}
+                        </div>
+
+                        {/* Probability */}
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Probability (0.01 - 1.0) *</label>
+                            <input 
+                                type="number" 
+                                step="0.01"
+                                min="0.01"
+                                max="1.0"
+                                value={formData.probability}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Only update if it's a valid number or empty (for clearing)
+                                    if (value === '' || (!isNaN(parseFloat(value)) && isFinite(value))) {
+                                        handleInputChange('probability', value === '' ? 0.01 : parseFloat(value));
+                                    }
+                                }}
+                                className={`w-full bg-transparent border rounded px-3 py-2 text-white focus:outline-none focus:ring-2 ${
+                                    formErrors.probability ? 'border-red-500 focus:ring-red-500' : 'border-yellow-700 focus:ring-yellow-500'
+                                }`}
+                                placeholder="0.1"
+                                disabled={modalLoading}
+                            />
+                            {formErrors.probability && <p className="text-red-400 text-xs mt-1">{formErrors.probability}</p>}
+                        </div>
+
+                        {/* Unlimited Toggle */}
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <label className="text-gray-300 text-sm">Unlimited Quantity</label>
+                                <Switch.Root
+                                    checked={formData.unlimited}
+                                    onCheckedChange={(checked) => handleInputChange('unlimited', checked)}
+                                    className="w-10 h-6 bg-gray-600 rounded-full data-[state=checked]:bg-yellow-500 relative flex items-center transition-colors duration-200"
+                                    disabled={modalLoading}
+                                >
+                                    <Switch.Thumb className="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 translate-x-1 data-[state=checked]:translate-x-5" />
+                                </Switch.Root>
+                            </div>
+                        </div>
+
+                        {/* Quantity (only if not unlimited) */}
+                        {!formData.unlimited && (
+                            <div>
+                                <label className="text-gray-300 text-sm mb-2 block">Quantity *</label>
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    value={formData.quantity}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Only update if it's a valid integer or empty (for clearing)
+                                        if (value === '' || (!isNaN(parseInt(value)) && parseInt(value) > 0)) {
+                                            handleInputChange('quantity', value === '' ? 1 : parseInt(value));
+                                        }
+                                    }}
+                                    className={`w-full bg-transparent border rounded px-3 py-2 text-white focus:outline-none focus:ring-2 ${
+                                        formErrors.quantity ? 'border-red-500 focus:ring-red-500' : 'border-yellow-700 focus:ring-yellow-500'
+                                    }`}
+                                    placeholder="1"
+                                    disabled={modalLoading}
+                                />
+                                {formErrors.quantity && <p className="text-red-400 text-xs mt-1">{formErrors.quantity}</p>}
+                            </div>
+                        )}
+
+                        {/* Image Upload */}
+                        <div>
+                            <label className="text-gray-300 text-sm mb-2 block">Image</label>
+                            <div 
+                                className={`border-2 border-dashed rounded-lg h-32 flex items-center justify-center bg-gray-900 transition-colors ${
+                                    dragActive ? 'border-yellow-500 bg-yellow-500/10' : 'border-gray-600'
+                                }`}
+                                onDragEnter={handleDrag}
+                                onDragLeave={handleDrag}
+                                onDragOver={handleDrag}
+                                onDrop={handleImageDrop}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {imagePreview ? (
+                                    <div className="relative">
+                                        <img src={imagePreview} alt="Preview" className="h-24 object-contain" />
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setImagePreview(null);
+                                                setFormData(prev => ({ ...prev, image: null }));
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                                            disabled={modalLoading}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-gray-400">
+                                        <img src={ImageIcon} alt="Upload" className="h-10 mx-auto mb-2" />
+                                        <p className="text-sm">Click or drag image here</p>
+                                        <p className="text-xs">(PNG, JPG, JPEG)</p>
+                                    </div>
+                                )}
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => e.target.files && e.target.files[0] && handleImageFile(e.target.files[0])}
+                                className="hidden"
+                                disabled={modalLoading}
+                            />
+                        </div>
+
+                        {/* Form Actions */}
                         <div className="flex justify-end gap-4 mt-2">
-                            <button type="button" className="bg-white text-red-500 px-4 py-1 rounded" onClick={() => setOpen(false)}>Cancel</button>
-                            <button type="submit" className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-4 py-1 rounded font-bold">Confirm</button>
+                            <button 
+                                type="button" 
+                                className="bg-white text-red-500 px-4 py-2 rounded hover:bg-gray-100 transition-colors" 
+                                onClick={() => setOpen(false)}
+                                disabled={modalLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit" 
+                                className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-6 py-2 rounded font-bold hover:from-yellow-600 hover:to-yellow-500 transition-colors disabled:opacity-50"
+                                disabled={modalLoading}
+                            >
+                                {modalLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+                                        {mode === "add" ? "Creating..." : "Updating..."}
+                                    </div>
+                                ) : (
+                                    mode === "add" ? "Create Item" : "Update Item"
+                                )}
+                            </button>
                         </div>
                     </form>
-                )}
-            </Dialog.Content>
-        </Dialog.Portal>
-    </Dialog.Root>
-);
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+};
 
 
 const PRIZE_SETTINGS_DATA = [
@@ -151,7 +433,6 @@ const USER_LOGS_DATA = [
 const LuckySpinManagement = () => {
     const [addOpen, setAddOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
-    const [sequenceOpen, setSequenceOpen] = useState(false);
     const [editData, setEditData] = useState({});
     const [activeCard, setActiveCard] = useState(topCards[0].label);
     const [prizeSettings, setPrizeSettings] = useState(PRIZE_SETTINGS_DATA);
@@ -159,8 +440,32 @@ const LuckySpinManagement = () => {
     const [spinItems, setSpinItems] = useState([]);
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [modalLoading, setModalLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
+
+    const fetchSpinItems = useCallback(async () => {
+        try {
+            setLoading(true);
+            const items = await luckySpinItemsService.listItems();
+            setSpinItems(items);
+            setError('');
+        } catch (err) {
+            setError('Failed to fetch spin items');
+            console.error('Failed to fetch spin items:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const fetchMembers = useCallback(async () => {
+        try {
+            const membersData = await memberService.listMembers();
+            setMembers(membersData);
+        } catch (err) {
+            console.error('Failed to fetch members:', err);
+        }
+    }, []);
 
     // Check authentication on component mount
     useEffect(() => {
@@ -189,42 +494,81 @@ const LuckySpinManagement = () => {
         checkAuth();
     }, [navigate]);
 
-    const fetchSpinItems = async () => {
-        try {
-            setLoading(true);
-            const items = await luckySpinItemsService.listItems();
-            setSpinItems(items);
-            setError('');
-        } catch (err) {
-            setError('Failed to fetch spin items');
-            console.error('Failed to fetch spin items:', err);
-        } finally {
-            setLoading(false);
+    const handleArchiveItem = async (uuid) => {
+        if (!confirm('Are you sure you want to archive this item? This action cannot be undone.')) {
+            return;
         }
-    };
-
-    const fetchMembers = async () => {
-        try {
-            const membersData = await memberService.listMembers();
-            setMembers(membersData);
-        } catch (err) {
-            console.error('Failed to fetch members:', err);
-        }
-    };
-
-    const handleDeleteItem = async (uuid) => {
+        
         try {
             await luckySpinItemsService.archiveItem(uuid);
             await fetchSpinItems(); // Refresh the list
+            setError(''); // Clear any existing errors
         } catch (err) {
-            setError('Failed to delete item');
-            console.error('Failed to delete item:', err);
+            setError('Failed to archive item');
+            console.error('Failed to archive item:', err);
         }
     };
 
-    const handleCardClick = (label) => {
-        setActiveCard(label);
+    const handleCreateItem = async (itemData, imageFile) => {
+        try {
+            setModalLoading(true);
+            setError('');
+            
+            let result;
+            if (imageFile) {
+                result = await luckySpinItemsService.createItemWithImage(itemData, imageFile);
+            } else {
+                result = await luckySpinItemsService.createItem(itemData);
+            }
+            
+            await fetchSpinItems(); // Refresh the list
+            setAddOpen(false); // Close modal
+            
+            // Show success message (you could use a toast library instead)
+            alert(`Successfully created spin item: ${result.reward_name}`);
+        } catch (err) {
+            setError(`Failed to create item: ${err.message}`);
+            console.error('Failed to create item:', err);
+        } finally {
+            setModalLoading(false);
+        }
     };
+
+    const handleUpdateItem = async (itemData, imageFile) => {
+        try {
+            setModalLoading(true);
+            setError('');
+            
+            // For updates, if there's a new image, we need to use multipart form
+            // Otherwise, use regular JSON update
+            let result;
+            if (imageFile) {
+                result = await luckySpinItemsService.createItemWithImage(itemData, imageFile);
+                // Note: The API might not support image updates via PUT, so we might need to handle this differently
+                // You may need to check your backend API to see if it supports image updates
+            } else {
+                result = await luckySpinItemsService.updateItem(editData.uuid, itemData);
+            }
+            
+            await fetchSpinItems(); // Refresh the list
+            setEditOpen(false); // Close modal
+            
+            alert(`Successfully updated spin item: ${result.reward_name}`);
+        } catch (err) {
+            setError(`Failed to update item: ${err.message}`);
+            console.error('Failed to update item:', err);
+        } finally {
+            setModalLoading(false);
+        }
+    };
+
+    const handleCardClick = useCallback((label) => {
+        setActiveCard(label);
+    }, []);
+
+    const handleSystemLimitChange = useCallback((idx, checked) => {
+        setPrizeSettings((prev) => prev.map((s, i) => i === idx ? { ...s, systemLimit: checked } : s));
+    }, []);
 
     return (
         <Tooltip.Provider>
@@ -316,9 +660,7 @@ const LuckySpinManagement = () => {
                                                 <td className="py-3 px-4">
                                                     <Switch.Root
                                                         checked={setting.systemLimit}
-                                                        onCheckedChange={(checked) => {
-                                                            setPrizeSettings((prev) => prev.map((s, i) => i === idx ? { ...s, systemLimit: checked } : s));
-                                                        }}
+                                                        onCheckedChange={(checked) => handleSystemLimitChange(idx, checked)}
                                                         className="w-10 h-6 bg-gray-300 rounded-full data-[state=checked]:bg-purple-500 relative flex items-center transition-colors duration-200"
                                                         style={{ outline: 'none' }}
                                                         tabIndex={0}
@@ -343,65 +685,114 @@ const LuckySpinManagement = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-lg font-semibold text-white">Spin Items Panel Table</h2>
                                 <div className="flex items-center gap-2">
-                                    <button className="bg-yellow-100 text-yellow-600 px-3 py-1 rounded text-xs font-bold" onClick={() => setSequenceOpen(true)}>Spin Sequence Setting</button>
-                                    <button className="bg-yellow-500 text-black px-4 py-1 rounded text-xs font-bold" onClick={() => setAddOpen(true)}>Add</button>
+                                    <button 
+                                        className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-black px-6 py-2 rounded font-bold hover:from-yellow-600 hover:to-yellow-500 transition-colors"
+                                        onClick={() => setAddOpen(true)}
+                                    >
+                                        Add New Spin Item
+                                    </button>
                                 </div>
                             </div>
                             <table className="w-full rounded overflow-hidden">
                                 <thead>
                                     <tr className="bg-black text-white">
-                                        <th className="text-left py-3 px-4 font-medium w-2/5">Reward Name</th>
-                                        <th className="text-center py-3 px-4 font-medium w-1/5">Item Image</th>
-                                        <th className="text-right py-3 px-4 font-medium w-2/5">Status</th>
+                                        <th className="text-left py-3 px-4 font-medium w-3/12">Reward Name</th>
+                                        <th className="text-center py-3 px-4 font-medium w-2/12">Image</th>
+                                        <th className="text-center py-3 px-4 font-medium w-2/12">Probability</th>
+                                        <th className="text-center py-3 px-4 font-medium w-2/12">Quantity</th>
+                                        <th className="text-center py-3 px-4 font-medium w-3/12">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan="3" className="py-8 text-center text-gray-400">
-                                                Loading spin items...
+                                            <td colSpan="5" className="py-8 text-center text-gray-400">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <div className="w-4 h-4 border-2 border-gray-400 border-t-yellow-500 rounded-full animate-spin"></div>
+                                                    Loading spin items...
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : error ? (
                                         <tr>
-                                            <td colSpan="3" className="py-8 text-center text-red-400">
-                                                {error}
+                                            <td colSpan="5" className="py-8 text-center text-red-400">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <span>⚠️ {error}</span>
+                                                    <button 
+                                                        onClick={fetchSpinItems}
+                                                        className="text-yellow-500 hover:text-yellow-400 text-sm underline"
+                                                    >
+                                                        Try again
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : spinItems.length === 0 ? (
                                         <tr>
-                                            <td colSpan="3" className="py-8 text-center text-gray-400">
-                                                No spin items found
+                                            <td colSpan="5" className="py-8 text-center text-gray-400">
+                                                No spin items found. Click "Add" to create your first spin item.
                                             </td>
                                         </tr>
                                     ) : (
                                         spinItems.map((item, idx) => (
-                                            <tr key={item.uuid || idx} className="border-b border-gray-800 bg-gray-900">
+                                            <tr key={item.uuid || idx} className="border-b border-gray-800 bg-gray-900 hover:bg-gray-800 transition-colors">
                                                 <td className="py-3 px-4 text-gray-200 text-left">
-                                                    {item.reward_name}
+                                                    <div className="font-medium">{item.reward_name}</div>
+                                                    {item.uuid && (
+                                                        <div className="text-xs text-gray-400 mt-1">
+                                                            ID: {item.uuid.substring(0, 8)}...
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     <div className="flex items-center justify-center h-full">
-                                                        {item.image && (item.image.endsWith('.png') || item.image.endsWith('.svg') || item.image.endsWith('.jpg') || item.image.endsWith('.jpeg')) ? (
-                                                            <img src={item.image} alt={item.reward_name} className="h-10 object-contain" />
+                                                        {item.image && (item.image.endsWith('.png') || item.image.endsWith('.svg') || item.image.endsWith('.jpg') || item.image.endsWith('.jpeg') || item.image.startsWith('http') || item.image.startsWith('data:')) ? (
+                                                            <img 
+                                                                src={item.image} 
+                                                                alt={item.reward_name} 
+                                                                className="h-12 w-12 object-cover rounded border border-gray-600" 
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextSibling.style.display = 'block';
+                                                                }}
+                                                            />
+                                                        ) : null}
+                                                        <span className={`text-gray-400 text-sm ${item.image ? 'hidden' : ''}`}>No Image</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4 text-center">
+                                                    <div className="text-gray-200 font-mono">
+                                                        {(parseFloat(item.probability) * 100).toFixed(2)}%
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4 text-center">
+                                                    <div className="text-gray-200">
+                                                        {item.unlimited ? (
+                                                            <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">
+                                                                Unlimited
+                                                            </span>
                                                         ) : (
-                                                            <span className="text-gray-400">No Image</span>
+                                                            <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">
+                                                                {item.quantity}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4 text-right">
-                                                    <button
-                                                        className="bg-green-500 text-white px-4 py-1 rounded mr-2"
-                                                        onClick={() => { setEditData(item); setEditOpen(true); }}
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        className="bg-black border border-red-400 text-red-500 px-4 py-1 rounded"
-                                                        onClick={() => handleDeleteItem(item.uuid)}
-                                                    >
-                                                        Delete
-                                                    </button>
+                                                <td className="py-3 px-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                                                            onClick={() => { setEditData(item); setEditOpen(true); }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                                                            onClick={() => handleArchiveItem(item.uuid)}
+                                                        >
+                                                            Archive
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -501,9 +892,21 @@ const LuckySpinManagement = () => {
                             </div>
                         </div>
                     ) : null}
-                    <SpinItemModal open={addOpen} setOpen={setAddOpen} mode="add" />
-                    <SpinItemModal open={editOpen} setOpen={setEditOpen} mode="edit" initialData={editData} />
-                    <SpinItemModal open={sequenceOpen} setOpen={setSequenceOpen} mode="sequence" />
+                    <SpinItemModal 
+                        open={addOpen} 
+                        setOpen={setAddOpen} 
+                        mode="add" 
+                        onSubmit={handleCreateItem}
+                        loading={modalLoading}
+                    />
+                    <SpinItemModal 
+                        open={editOpen} 
+                        setOpen={setEditOpen} 
+                        mode="edit" 
+                        initialData={editData}
+                        onSubmit={handleUpdateItem}
+                        loading={modalLoading}
+                    />
                 </div>
             </div>
         </Tooltip.Provider>
