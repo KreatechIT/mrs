@@ -7,7 +7,7 @@
 export const API_CONFIG = {
   BASE_URL: 'https://mrs-staging.onrender.com/api',
   TIMEOUT: 30000, // 30 seconds
-  RETRY_ATTEMPTS: 3,
+  RETRY_ATTEMPTS: 10,
   ENABLE_LOGGING: process.env.NODE_ENV === 'development',
 } as const;
 
@@ -41,6 +41,7 @@ export const SPIN_SEQUENCE_ENDPOINTS = {
 export const MEMBER_ENDPOINTS = {
   LIST: '/member/members/',
   DETAIL: (uuid: string) => `/member/members/${uuid}/`,
+  LOGIN: '/login/member-code/',
   SINGLE_SPIN: (uuid: string) => `/member/${uuid}/one-spin/`,
   TEN_SPINS: (uuid: string) => `/member/${uuid}/ten-spin/`,
 } as const;

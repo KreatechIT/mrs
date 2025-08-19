@@ -58,3 +58,16 @@ export interface MemberListResponse {
   next: string | null;
   previous: string | null;
 }
+
+// Member Login Request Interface
+export interface MemberLoginRequest {
+  username: string;
+  login_code: string;
+}
+
+// Member Login Response Interface
+export interface MemberLoginResponse {
+  access: string;
+  refresh: string;
+  member: Member;
+}

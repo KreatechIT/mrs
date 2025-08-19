@@ -8,6 +8,8 @@ import type {
   SpinResult,
   SingleSpinResponse,
   TenSpinsResponse,
+  MemberLoginRequest,
+  MemberLoginResponse,
   APIResponse
 } from '../types';
 import { apiClient } from '../client/APIClient';
@@ -15,6 +17,41 @@ import { MEMBER_ENDPOINTS } from '../config/endpoints';
 import { featureFlags } from '../config/settings';
 
 export class MemberService {
+  /**
+   * Member login with username and login code
+   */
+  async loginMember(credentials: MemberLoginRequest): Promise<MemberLoginResponse> {
+    try {
+      this.validateLoginCredentials(credentials);
+
+      if (featureFlags.enableRequestLogging) {
+        console.log(`🔐 Member login attempt for: ${credentials.username}`);
+      }
+
+      const response: APIResponse<MemberLoginResponse> = await apiClient.post(
+        MEMBER_ENDPOINTS.LOGIN,
+        credentials
+      );
+
+      if (!response.data) {
+        throw new Error('Invalid login response');
+      }
+
+      const loginResult = this.transformLoginResponse(response.data);
+
+      if (featureFlags.enableRequestLogging) {
+        console.log(`✅ Member login successful: ${loginResult.member.username}`);
+      }
+
+      return loginResult;
+    } catch (error) {
+      if (featureFlags.enableRequestLogging) {
+        console.error(`❌ Member login failed for ${credentials.username}:`, error);
+      }
+      throw this.handleServiceError(error, `Failed to login member: ${credentials.username}`);
+    }
+  }
+
   /**
    * List all members
    */
@@ -193,6 +230,43 @@ export class MemberService {
       reward_name: result.reward_name.trim(),
       image: result.image || null,
     };
+  }
+
+  /**
+   * Transform login response data from API response format
+   */
+  private transformLoginResponse(response: MemberLoginResponse): MemberLoginResponse {
+    // Validate required fields
+    if (!response.access || !response.refresh || !response.member) {
+      throw new Error('Invalid login response: missing required fields');
+    }
+
+    return {
+      access: response.access,
+      refresh: response.refresh,
+      member: this.transformMember(response.member),
+    };
+  }
+
+  /**
+   * Validate login credentials
+   */
+  private validateLoginCredentials(credentials: MemberLoginRequest): void {
+    if (!credentials.username || typeof credentials.username !== 'string') {
+      throw new Error('Username is required and must be a string');
+    }
+
+    if (!credentials.login_code || typeof credentials.login_code !== 'string') {
+      throw new Error('Login code is required and must be a string');
+    }
+
+    if (credentials.username.trim().length === 0) {
+      throw new Error('Username cannot be empty');
+    }
+
+    if (credentials.login_code.trim().length === 0) {
+      throw new Error('Login code cannot be empty');
+    }
   }
 
   /**
