@@ -3,24 +3,15 @@
  * Handles member listing, details, and spin operations (single/ten spins)
  */
 
-import type {
-  Member,
-  SpinResult,
-  SingleSpinResponse,
-  TenSpinsResponse,
-  MemberLoginRequest,
-  MemberLoginResponse,
-  APIResponse
-} from '../types';
-import { apiClient } from '../client/APIClient';
-import { MEMBER_ENDPOINTS } from '../config/endpoints';
-import { featureFlags } from '../config/settings';
+import { apiClient } from '../client/APIClient.js';
+import { MEMBER_ENDPOINTS } from '../config/endpoints.js';
+import { featureFlags } from '../config/settings.js';
 
 export class MemberService {
   /**
    * Member login with username and login code
    */
-  async loginMember(credentials: MemberLoginRequest): Promise<MemberLoginResponse> {
+  async loginMember(credentials) {
     try {
       this.validateLoginCredentials(credentials);
 
@@ -28,7 +19,7 @@ export class MemberService {
         console.log(`🔐 Member login attempt for: ${credentials.username}`);
       }
 
-      const response: APIResponse<MemberLoginResponse> = await apiClient.post(
+      const response = await apiClient.post(
         MEMBER_ENDPOINTS.LOGIN,
         credentials
       );
@@ -40,7 +31,7 @@ export class MemberService {
       const loginResult = this.transformLoginResponse(response.data);
 
       if (featureFlags.enableRequestLogging) {
-        console.log(`✅ Member login successful: ${loginResult.member.username}`);
+        console.log(`✅ Member login successful: ${credentials.username}`);
       }
 
       return loginResult;
@@ -55,13 +46,13 @@ export class MemberService {
   /**
    * List all members
    */
-  async listMembers(): Promise<Member[]> {
+  async listMembers() {
     try {
       if (featureFlags.enableRequestLogging) {
         console.log('👥 Fetching all members');
       }
 
-      const response: APIResponse<Member[]> = await apiClient.get(
+      const response = await apiClient.get(
         MEMBER_ENDPOINTS.LIST
       );
 
@@ -87,7 +78,7 @@ export class MemberService {
   /**
    * Get single member by UUID
    */
-  async getMember(uuid: string): Promise<Member> {
+  async getMember(uuid) {
     try {
       this.validateUuid(uuid);
 
@@ -95,7 +86,7 @@ export class MemberService {
         console.log(`👤 Fetching member: ${uuid}`);
       }
 
-      const response: APIResponse<Member> = await apiClient.get(
+      const response = await apiClient.get(
         MEMBER_ENDPOINTS.DETAIL(uuid)
       );
 
@@ -121,7 +112,7 @@ export class MemberService {
   /**
    * Perform single spin for member
    */
-  async performSingleSpin(memberUuid: string): Promise<SpinResult> {
+  async performSingleSpin(memberUuid) {
     try {
       this.validateUuid(memberUuid);
 
@@ -129,7 +120,7 @@ export class MemberService {
         console.log(`🎰 Performing single spin for member: ${memberUuid}`);
       }
 
-      const response: APIResponse<SingleSpinResponse> = await apiClient.post(
+      const response = await apiClient.post(
         MEMBER_ENDPOINTS.SINGLE_SPIN(memberUuid),
         {} // Empty body as per API
       );
@@ -156,7 +147,7 @@ export class MemberService {
   /**
    * Perform ten spins for member
    */
-  async performTenSpins(memberUuid: string): Promise<SpinResult[]> {
+  async performTenSpins(memberUuid) {
     try {
       this.validateUuid(memberUuid);
 
@@ -164,7 +155,7 @@ export class MemberService {
         console.log(`🎰 Performing ten spins for member: ${memberUuid}`);
       }
 
-      const response: APIResponse<TenSpinsResponse> = await apiClient.post(
+      const response = await apiClient.post(
         MEMBER_ENDPOINTS.TEN_SPINS(memberUuid),
         {} // Empty body as per API
       );
@@ -191,14 +182,14 @@ export class MemberService {
   /**
    * Transform member list data from API response format
    */
-  private transformMemberList(members: Member[]): Member[] {
+  transformMemberList(members) {
     return members.map(member => this.transformMember(member));
   }
 
   /**
    * Transform single member data from API response format
    */
-  private transformMember(member: Member): Member {
+  transformMember(member) {
     // Validate required fields
     if (!member.uuid || !member.username) {
       throw new Error('Invalid member data: missing required fields');
@@ -211,15 +202,13 @@ export class MemberService {
       tier: member.tier || '-',
       current_points: member.current_points || 0,
       login_code: member.login_code || '',
-      created_at: member.created_at,
-      updated_at: member.updated_at,
     };
   }
 
   /**
    * Transform spin result data from API response format
    */
-  private transformSpinResult(result: SpinResult): SpinResult {
+  transformSpinResult(result) {
     // Validate required fields
     if (!result.uuid || !result.reward_name) {
       throw new Error('Invalid spin result: missing required fields');
@@ -235,23 +224,24 @@ export class MemberService {
   /**
    * Transform login response data from API response format
    */
-  private transformLoginResponse(response: MemberLoginResponse): MemberLoginResponse {
+  transformLoginResponse(response) {
     // Validate required fields
-    if (!response.access || !response.refresh || !response.member) {
+    if (!response.access || !response.refresh || !response.user_id || !response.member_id) {
       throw new Error('Invalid login response: missing required fields');
     }
 
     return {
       access: response.access,
       refresh: response.refresh,
-      member: this.transformMember(response.member),
+      user_id: response.user_id,
+      member_id: response.member_id,
     };
   }
 
   /**
    * Validate login credentials
    */
-  private validateLoginCredentials(credentials: MemberLoginRequest): void {
+  validateLoginCredentials(credentials) {
     if (!credentials.username || typeof credentials.username !== 'string') {
       throw new Error('Username is required and must be a string');
     }
@@ -272,7 +262,7 @@ export class MemberService {
   /**
    * Validate UUID format
    */
-  private validateUuid(uuid: string): void {
+  validateUuid(uuid) {
     if (!uuid || typeof uuid !== 'string') {
       throw new Error('UUID is required and must be a string');
     }
@@ -291,7 +281,7 @@ export class MemberService {
   /**
    * Handle service errors with proper error transformation
    */
-  private handleServiceError(error: any, defaultMessage: string): Error {
+  handleServiceError(error, defaultMessage) {
     if (error instanceof Error) {
       return error;
     }

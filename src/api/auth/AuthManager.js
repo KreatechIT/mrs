@@ -3,23 +3,19 @@
  * Handles token storage, retrieval, refresh, and validation
  */
 
-import type { 
-  AuthTokens, 
-  RefreshTokenRequest, 
-  RefreshTokenResponse, 
-  TokenVerificationResponse 
-} from '../types';
-import { authSettings, featureFlags } from '../config/settings';
-import { AUTH_ENDPOINTS } from '../config/endpoints';
+import { authSettings, featureFlags } from '../config/settings.js';
+import { AUTH_ENDPOINTS } from '../config/endpoints.js';
 
 export class AuthManager {
-  private refreshPromise: Promise<string> | null = null;
-  private refreshAttempts: number = 0;
+  constructor() {
+    this.refreshPromise = null;
+    this.refreshAttempts = 0;
+  }
 
   /**
    * Store authentication tokens securely
    */
-  storeTokens(tokens: AuthTokens): void {
+  storeTokens(tokens) {
     try {
       const tokenData = {
         ...tokens,
@@ -40,9 +36,16 @@ export class AuthManager {
   /**
    * Retrieve stored authentication tokens
    */
-  getTokens(): AuthTokens | null {
+  getTokens() {
     try {
-      const stored = localStorage.getItem(authSettings.tokenStorageKey);
+      // First try the default auth tokens
+      let stored = localStorage.getItem(authSettings.tokenStorageKey);
+      
+      // If not found, try member tokens
+      if (!stored) {
+        stored = localStorage.getItem('memberTokens');
+      }
+      
       if (!stored) {
         return null;
       }
@@ -62,7 +65,7 @@ export class AuthManager {
   /**
    * Get access token
    */
-  getAccessToken(): string | null {
+  getAccessToken() {
     const tokens = this.getTokens();
     return tokens?.access || null;
   }
@@ -70,7 +73,7 @@ export class AuthManager {
   /**
    * Get refresh token
    */
-  getRefreshToken(): string | null {
+  getRefreshToken() {
     const tokens = this.getTokens();
     return tokens?.refresh || null;
   }
@@ -78,10 +81,12 @@ export class AuthManager {
   /**
    * Clear all stored tokens
    */
-  clearTokens(): void {
+  clearTokens() {
     try {
       localStorage.removeItem(authSettings.tokenStorageKey);
       localStorage.removeItem(authSettings.refreshTokenKey);
+      localStorage.removeItem('memberTokens');
+      localStorage.removeItem('memberData');
       
       if (featureFlags.enableRequestLogging) {
         console.log('🔐 Tokens cleared');
@@ -94,7 +99,7 @@ export class AuthManager {
   /**
    * Check if access token is expired or about to expire
    */
-  isTokenExpired(token?: string): boolean {
+  isTokenExpired(token) {
     const accessToken = token || this.getAccessToken();
     if (!accessToken) {
       return true;
@@ -122,7 +127,7 @@ export class AuthManager {
   /**
    * Decode JWT payload without verification
    */
-  private decodeJWTPayload(token: string): any {
+  decodeJWTPayload(token) {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) {
@@ -139,9 +144,69 @@ export class AuthManager {
   }
 
   /**
+   * Get valid access token (refresh if needed)
+   */
+  async getValidAccessToken() {
+    if (!authSettings.autoRefreshEnabled) {
+      return this.getAccessToken();
+    }
+
+    const currentToken = this.getAccessToken();
+    
+    if (!currentToken) {
+      return null;
+    }
+
+    // Check if token is expired or about to expire
+    if (this.isTokenExpired(currentToken)) {
+      try {
+        const newToken = await this.refreshAccessToken();
+        return newToken;
+      } catch (error) {
+        console.error('Failed to refresh token:', error);
+        return null;
+      }
+    }
+
+    return currentToken;
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated() {
+    const tokens = this.getTokens();
+    if (!tokens || !tokens.access || !tokens.refresh) {
+      return false;
+    }
+
+    // Check if access token is not expired
+    return !this.isTokenExpired(tokens.access);
+  }
+
+  /**
+   * Handle authentication error (401/403)
+   */
+  async handleAuthError() {
+    if (!authSettings.autoRefreshEnabled) {
+      this.clearTokens();
+      return false;
+    }
+
+    try {
+      await this.refreshAccessToken();
+      return true;
+    } catch (error) {
+      console.error('Failed to handle auth error:', error);
+      this.clearTokens();
+      return false;
+    }
+  }
+
+  /**
    * Refresh access token using refresh token
    */
-  async refreshAccessToken(): Promise<string> {
+  async refreshAccessToken() {
     // Prevent multiple simultaneous refresh attempts
     if (this.refreshPromise) {
       return this.refreshPromise;
@@ -175,14 +240,14 @@ export class AuthManager {
   /**
    * Perform the actual token refresh API call
    */
-  private async performTokenRefresh(refreshToken: string): Promise<string> {
+  async performTokenRefresh(refreshToken) {
     try {
-      const response = await fetch(`${process.env.VITE_API_BASE_URL || 'https://mrs-staging.onrender.com/api'}${AUTH_ENDPOINTS.REFRESH}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mrs-staging.onrender.com/api'}${AUTH_ENDPOINTS.REFRESH}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ refresh: refreshToken } as RefreshTokenRequest),
+        body: JSON.stringify({ refresh: refreshToken }),
       });
 
       if (!response.ok) {
@@ -194,7 +259,7 @@ export class AuthManager {
         throw new Error(`Token refresh failed: ${response.statusText}`);
       }
 
-      const data: RefreshTokenResponse = await response.json();
+      const data = await response.json();
       
       if (!data.access) {
         throw new Error('Invalid refresh response');
@@ -202,7 +267,7 @@ export class AuthManager {
 
       // Update stored tokens
       const currentTokens = this.getTokens();
-      const newTokens: AuthTokens = {
+      const newTokens = {
         access: data.access,
         refresh: data.refresh || currentTokens?.refresh || refreshToken,
       };
@@ -227,170 +292,9 @@ export class AuthManager {
   }
 
   /**
-   * Verify token with the API
-   */
-  async verifyToken(token?: string): Promise<boolean> {
-    const accessToken = token || this.getAccessToken();
-    if (!accessToken) {
-      return false;
-    }
-
-    try {
-      const response = await fetch(`${process.env.VITE_API_BASE_URL || 'https://mrs-staging.onrender.com/api'}${AUTH_ENDPOINTS.VERIFY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const data: TokenVerificationResponse = await response.json();
-      return data.valid === true;
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get valid access token (refresh if needed)
-   */
-  async getValidAccessToken(): Promise<string | null> {
-    if (!authSettings.autoRefreshEnabled) {
-      return this.getAccessToken();
-    }
-
-    const currentToken = this.getAccessToken();
-    
-    if (!currentToken) {
-      return null;
-    }
-
-    // Check if token is expired or about to expire
-    if (this.isTokenExpired(currentToken)) {
-      try {
-        const newToken = await this.refreshAccessToken();
-        return newToken;
-      } catch (error) {
-        console.error('Failed to refresh token:', error);
-        return null;
-      }
-    }
-
-    return currentToken;
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  isAuthenticated(): boolean {
-    const tokens = this.getTokens();
-    if (!tokens || !tokens.access || !tokens.refresh) {
-      return false;
-    }
-
-    // Check if access token is not expired
-    return !this.isTokenExpired(tokens.access);
-  }
-
-  /**
-   * Handle authentication error (401/403)
-   */
-  async handleAuthError(): Promise<boolean> {
-    if (!authSettings.autoRefreshEnabled) {
-      this.clearTokens();
-      return false;
-    }
-
-    try {
-      await this.refreshAccessToken();
-      return true;
-    } catch (error) {
-      console.error('Failed to handle auth error:', error);
-      this.clearTokens();
-      return false;
-    }
-  }
-
-  /**
-   * Get token expiration time
-   */
-  getTokenExpiration(token?: string): Date | null {
-    const accessToken = token || this.getAccessToken();
-    if (!accessToken) {
-      return null;
-    }
-
-    try {
-      const payload = this.decodeJWTPayload(accessToken);
-      if (!payload || !payload.exp) {
-        return null;
-      }
-
-      return new Date(payload.exp * 1000);
-    } catch (error) {
-      console.error('Failed to get token expiration:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get time until token expires (in milliseconds)
-   */
-  getTimeUntilExpiration(token?: string): number | null {
-    const expiration = this.getTokenExpiration(token);
-    if (!expiration) {
-      return null;
-    }
-
-    return expiration.getTime() - Date.now();
-  }
-
-  /**
-   * Schedule automatic token refresh
-   */
-  scheduleTokenRefresh(): void {
-    if (!authSettings.autoRefreshEnabled) {
-      return;
-    }
-
-    const timeUntilExpiration = this.getTimeUntilExpiration();
-    if (!timeUntilExpiration || timeUntilExpiration <= 0) {
-      return;
-    }
-
-    // Schedule refresh before expiration (with buffer)
-    const refreshTime = timeUntilExpiration - authSettings.tokenExpirationBuffer;
-    
-    if (refreshTime > 0) {
-      setTimeout(async () => {
-        try {
-          await this.refreshAccessToken();
-          this.scheduleTokenRefresh(); // Schedule next refresh
-        } catch (error) {
-          console.error('Scheduled token refresh failed:', error);
-        }
-      }, refreshTime);
-
-      if (featureFlags.enableRequestLogging) {
-        console.log(`🕒 Token refresh scheduled in ${Math.round(refreshTime / 1000)} seconds`);
-      }
-    }
-  }
-
-  /**
    * Initialize auth manager
    */
-  initialize(): void {
-    // Schedule token refresh if user is authenticated
-    if (this.isAuthenticated()) {
-      this.scheduleTokenRefresh();
-    }
-
+  initialize() {
     if (featureFlags.enableRequestLogging) {
       console.log('🔐 AuthManager initialized');
     }

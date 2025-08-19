@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Crown, Gift, Coins, Star, Zap, Disc, CheckCircle, User } from 'lucide-react';
+import { memberService } from '@/api/services/MemberService.js';
+import { useNavigate } from 'react-router-dom';
 import spinImg from '@/assets/images/wheel/spin-frame.png';
 import MiddleSpinner from '@/assets/images/wheel/middle-spinner.png';
 import group1Img from '@/assets/images/wheel/group-1.png';
@@ -29,6 +31,34 @@ export const LuckySpinPage = () => {
     const [currentPrize, setCurrentPrize] = useState(null);
     const [showParticles, setShowParticles] = useState(false);
     const [modalAnimation, setModalAnimation] = useState('');
+    const [memberData, setMemberData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    // Check member authentication on component mount
+    useEffect(() => {
+        const checkMemberAuth = () => {
+            const storedMemberData = localStorage.getItem('memberData');
+            const storedTokens = localStorage.getItem('memberTokens');
+            
+            if (!storedMemberData || !storedTokens) {
+                navigate('/member-login');
+                return;
+            }
+            
+            try {
+                const member = JSON.parse(storedMemberData);
+                setMemberData(member);
+                // Set initial spin count based on member data or default
+                setSpinCount(5); // Default spins, could be based on member tier
+            } catch (err) {
+                console.error('Failed to parse member data:', err);
+                navigate('/member-login');
+            }
+        };
+
+        checkMemberAuth();
+    }, [navigate]);
 
     // Play sound effect using Web Audio API
     const playSound = (type) => {
@@ -117,69 +147,93 @@ export const LuckySpinPage = () => {
         }
     };
 
-    // Function to perform the spin animation and logic
-    const performSpin = () => {
-        if (spinCount > 0 && !isSpinning) {
+    // Function to perform the spin animation and logic with API integration
+    const performSpin = async () => {
+        if (spinCount > 0 && !isSpinning && memberData) {
             playSound('spin');
             setIsSpinning(true);
-            setSpinCount(prev => prev - 1);
+            setLoading(true);
             setShowParticles(true);
 
-            // Randomly select a prize
-            const randomIndex = Math.floor(Math.random() * prizes.length);
-            const selectedPrize = prizes[randomIndex];
-            setCurrentPrize(selectedPrize);
-
-            // Calculate total rotation for the wheel and text
-            const fullRotations = 8 + Math.floor(Math.random() * 5); // 8-13 full rotations for more dramatic effect
-            const targetAngle = selectedPrize.angle;
-            const totalRotation = fullRotations * 360 + targetAngle;
-
-            // Add glow effect to wheel
-            if (wheelRef.current) {
-                wheelRef.current.style.filter = 'drop-shadow(0 0 20px #f2c36b)';
-                wheelRef.current.style.transition = "transform 5s cubic-bezier(0.17, 0.67, 0.12, 1.04), filter 0.3s";
-                wheelRef.current.style.transform = `rotate(${totalRotation}deg) scale(1.05)`;
-
-                if (wheelTextRef.current) {
-                    wheelTextRef.current.style.transition = "transform 5s cubic-bezier(0.17, 0.67, 0.12, 1.04)";
-                    wheelTextRef.current.style.transform = `rotate(${totalRotation}deg) scale(1.05)`;
-                }
-
-                // Actions after the spin animation completes
-                setTimeout(() => {
-                    playSound('win');
-                    setShowParticles(false);
-
-                    // Add the spin result to history
-                    const newHistory = {
-                        date: new Date().toISOString().split('T')[0],
-                        user: "YOU**************",
-                        prize: selectedPrize.name
+            try {
+                // Call the API to perform a single spin
+                const spinResult = await memberService.performSingleSpin(memberData.uuid);
+                
+                // Find matching prize from our local prizes array or create a new one
+                let selectedPrize = prizes.find(p => p.name === spinResult.reward_name);
+                if (!selectedPrize) {
+                    // If prize not found in local array, create a default one
+                    selectedPrize = {
+                        name: spinResult.reward_name,
+                        angle: Math.floor(Math.random() * 360),
+                        chance: "Unknown",
+                        icon: "🎁"
                     };
+                }
+                
+                setCurrentPrize(selectedPrize);
+                setSpinCount(prev => prev - 1);
 
-                    setSpinHistory([newHistory, ...spinHistory.slice(0, 9)]); // Keep last 10 entries
+                // Calculate total rotation for the wheel and text
+                const fullRotations = 8 + Math.floor(Math.random() * 5); // 8-13 full rotations for more dramatic effect
+                const targetAngle = selectedPrize.angle;
+                const totalRotation = fullRotations * 360 + targetAngle;
 
-                    // Reset wheel position for the next spin (after a short delay)
+                // Add glow effect to wheel
+                if (wheelRef.current) {
+                    wheelRef.current.style.filter = 'drop-shadow(0 0 20px #f2c36b)';
+                    wheelRef.current.style.transition = "transform 5s cubic-bezier(0.17, 0.67, 0.12, 1.04), filter 0.3s";
+                    wheelRef.current.style.transform = `rotate(${totalRotation}deg) scale(1.05)`;
+
+                    if (wheelTextRef.current) {
+                        wheelTextRef.current.style.transition = "transform 5s cubic-bezier(0.17, 0.67, 0.12, 1.04)";
+                        wheelTextRef.current.style.transform = `rotate(${totalRotation}deg) scale(1.05)`;
+                    }
+
+                    // Actions after the spin animation completes
                     setTimeout(() => {
-                        if (wheelRef.current) {
-                            wheelRef.current.style.transition = "none";
-                            wheelRef.current.style.transform = "rotate(0deg) scale(1)";
-                            wheelRef.current.style.filter = 'none';
+                        playSound('win');
+                        setShowParticles(false);
 
-                            if (wheelTextRef.current) {
-                                wheelTextRef.current.style.transition = "none";
-                                wheelTextRef.current.style.transform = "rotate(0deg) scale(1)";
+                        // Add the spin result to history
+                        const newHistory = {
+                            date: new Date().toISOString().split('T')[0],
+                            user: `${memberData.username}**************`,
+                            prize: spinResult.reward_name
+                        };
+
+                        setSpinHistory([newHistory, ...spinHistory.slice(0, 9)]); // Keep last 10 entries
+
+                        // Reset wheel position for the next spin (after a short delay)
+                        setTimeout(() => {
+                            if (wheelRef.current) {
+                                wheelRef.current.style.transition = "none";
+                                wheelRef.current.style.transform = "rotate(0deg) scale(1)";
+                                wheelRef.current.style.filter = 'none';
+
+                                if (wheelTextRef.current) {
+                                    wheelTextRef.current.style.transition = "none";
+                                    wheelTextRef.current.style.transform = "rotate(0deg) scale(1)";
+                                }
+
+                                setIsSpinning(false); // Allow new spins
+                                setLoading(false);
                             }
+                        }, 1000);
 
-                            setIsSpinning(false); // Allow new spins
-                        }
-                    }, 1000);
-
-                    // Show the win modal with animation
-                    setModalAnimation('animate-bounce-in');
-                    setShowWinModal(true);
-                }, 5500); // Wait for animation + a little extra
+                        // Show the win modal with animation
+                        setModalAnimation('animate-bounce-in');
+                        setShowWinModal(true);
+                    }, 5500); // Wait for animation + a little extra
+                }
+            } catch (error) {
+                console.error('Spin failed:', error);
+                setIsSpinning(false);
+                setLoading(false);
+                setShowParticles(false);
+                
+                // Show error message or handle gracefully
+                alert('Spin failed. Please try again.');
             }
         } else if (spinCount <= 0) {
             playSound('click');
@@ -190,6 +244,47 @@ export const LuckySpinPage = () => {
                 setTimeout(() => wheelElement.classList.remove('animate-shake'), 500);
             }
             console.log("You need to purchase spins first!");
+        }
+    };
+
+    // Function to perform ten spins with API integration
+    const performTenSpins = async () => {
+        if (spinCount >= 10 && !isSpinning && memberData) {
+            setIsSpinning(true);
+            setLoading(true);
+            playSound('spin');
+
+            try {
+                // Call the API to perform ten spins
+                const spinResults = await memberService.performTenSpins(memberData.uuid);
+                
+                setSpinCount(prev => prev - 10);
+
+                // Process all spin results
+                const newHistoryEntries = spinResults.map(result => ({
+                    date: new Date().toISOString().split('T')[0],
+                    user: `${memberData.username}**************`,
+                    prize: result.reward_name
+                }));
+
+                // Add all results to history
+                setSpinHistory([...newHistoryEntries, ...spinHistory.slice(0, 10 - newHistoryEntries.length)]);
+
+                // Show results summary
+                const resultsSummary = spinResults.map(r => r.reward_name).join(', ');
+                alert(`Ten Spins Complete! You won: ${resultsSummary}`);
+
+                setIsSpinning(false);
+                setLoading(false);
+            } catch (error) {
+                console.error('Ten spins failed:', error);
+                setIsSpinning(false);
+                setLoading(false);
+                alert('Ten spins failed. Please try again.');
+            }
+        } else if (spinCount < 10) {
+            playSound('click');
+            alert('You need at least 10 spins to use this feature!');
         }
     };
 
@@ -468,7 +563,7 @@ export const LuckySpinPage = () => {
                                                 className="flex-1 flex items-center justify-center gap-4 py-1.5 relative rounded-md border-[0.5px] border-solid border-[#ffffff66] shadow-[inset_-5px_-5px_15px_#00000066,1px_4px_11px_#0000001a] bg-[linear-gradient(0deg,rgba(242,195,107,0)_0%,rgba(221,143,31,1)_100%),linear-gradient(0deg,rgba(255,255,132,1)_0%,rgba(255,255,132,1)_100%)] cursor-pointer hover:brightness-110 hover:scale-105 active:scale-95 transition-all duration-300 transform hover:shadow-[0_0_20px_rgba(242,195,107,0.5)]"
                                                 onClick={() => {
                                                     playSound('click');
-                                                    addSpin(10);
+                                                    performTenSpins();
                                                 }}
                                             >
                                                 <div className="relative w-fit mt-[-0.50px] [font-family:'Poppins',Helvetica] font-semibold text-black text-[8px] text-center tracking-[0] leading-[normal]">

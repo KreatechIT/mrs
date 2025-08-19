@@ -3,27 +3,17 @@
  * Handles admin login, token refresh, verification, and logout functionality
  */
 
-import type { 
-  LoginCredentials, 
-  AuthResponse, 
-  AuthTokens,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
-  TokenVerificationResponse,
-  LogoutRequest,
-  APIResponse 
-} from '../types';
-import { apiClient } from '../client/APIClient';
-import { authManager } from '../auth/AuthManager';
-import { AUTH_ENDPOINTS } from '../config/endpoints';
-import { featureFlags } from '../config/settings';
-import { notificationService } from './NotificationService';
+import { apiClient } from '../client/APIClient.js';
+import { authManager } from '../auth/AuthManager.js';
+import { AUTH_ENDPOINTS } from '../config/endpoints.js';
+import { featureFlags } from '../config/settings.js';
+import { notificationService } from './NotificationService.js';
 
 export class AuthService {
   /**
    * Admin login with credential validation
    */
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials) {
     try {
       // Basic validation
       if (!credentials.username?.trim() || !credentials.password) {
@@ -32,7 +22,7 @@ export class AuthService {
         throw error;
       }
 
-      const response: APIResponse<AuthResponse> = await apiClient.post(
+      const response = await apiClient.post(
         AUTH_ENDPOINTS.LOGIN,
         credentials
       );
@@ -64,13 +54,13 @@ export class AuthService {
   /**
    * Automatic token refresh using refresh token
    */
-  async refreshToken(): Promise<string> {
+  async refreshToken() {
     const refreshToken = authManager.getRefreshToken();
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
 
-    const response: APIResponse<RefreshTokenResponse> = await apiClient.post(
+    const response = await apiClient.post(
       AUTH_ENDPOINTS.REFRESH,
       { refresh: refreshToken }
     );
@@ -92,17 +82,17 @@ export class AuthService {
   /**
    * Token verification for security validation
    */
-  async verifyToken(token?: string): Promise<boolean> {
+  async verifyToken(token) {
     const accessToken = token || authManager.getAccessToken();
     if (!accessToken) return false;
 
     try {
-      const response: APIResponse<TokenVerificationResponse> = await apiClient.post(
+      const response = await apiClient.post(
         AUTH_ENDPOINTS.VERIFY,
-        {},
-        { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        { token: accessToken }
       );
-      return response.data?.valid === true;
+      // API returns 200 status with empty body if token is valid
+      return response.status === 200;
     } catch {
       return false;
     }
@@ -111,7 +101,7 @@ export class AuthService {
   /**
    * Logout with token invalidation
    */
-  async logout(): Promise<void> {
+  async logout() {
     try {
       const refreshToken = authManager.getRefreshToken();
       
@@ -122,7 +112,7 @@ export class AuthService {
       // Attempt to invalidate refresh token on server
       if (refreshToken) {
         try {
-          const logoutRequest: LogoutRequest = {
+          const logoutRequest = {
             refresh: refreshToken,
           };
 
@@ -167,144 +157,35 @@ export class AuthService {
   /**
    * Check if user is currently authenticated
    */
-  isAuthenticated(): boolean {
+  isAuthenticated() {
     return authManager.isAuthenticated();
   }
 
   /**
    * Get current authentication tokens
    */
-  getTokens(): AuthTokens | null {
+  getTokens() {
     return authManager.getTokens();
   }
 
   /**
    * Get current access token
    */
-  getAccessToken(): string | null {
+  getAccessToken() {
     return authManager.getAccessToken();
   }
 
   /**
    * Get valid access token (refresh if needed)
    */
-  async getValidAccessToken(): Promise<string | null> {
+  async getValidAccessToken() {
     return authManager.getValidAccessToken();
-  }
-
-  /**
-   * Handle token expiration with automatic renewal
-   */
-  async handleTokenExpiration(): Promise<boolean> {
-    try {
-      await this.refreshToken();
-      return true;
-    } catch (error) {
-      if (featureFlags.enableRequestLogging) {
-        console.error('❌ Failed to handle token expiration:', error);
-      }
-      return false;
-    }
-  }
-
-  /**
-   * Check if access token is expired or about to expire
-   */
-  isTokenExpired(token?: string): boolean {
-    return authManager.isTokenExpired(token);
-  }
-
-  /**
-   * Get token expiration time
-   */
-  getTokenExpiration(token?: string): Date | null {
-    return authManager.getTokenExpiration(token);
-  }
-
-  /**
-   * Get time until token expires (in milliseconds)
-   */
-  getTimeUntilExpiration(token?: string): number | null {
-    return authManager.getTimeUntilExpiration(token);
-  }
-
-  /**
-   * Schedule automatic token refresh
-   */
-  scheduleTokenRefresh(): void {
-    authManager.scheduleTokenRefresh();
-  }
-
-  /**
-   * Initialize authentication service
-   */
-  initialize(): void {
-    authManager.initialize();
-    
-    if (featureFlags.enableRequestLogging) {
-      console.log('🔐 AuthService initialized');
-    }
-  }
-
-  /**
-   * Validate login credentials
-   */
-  private validateLoginCredentials(credentials: LoginCredentials): void {
-    if (!credentials.username || typeof credentials.username !== 'string') {
-      throw new Error('Username is required and must be a string');
-    }
-
-    if (!credentials.password || typeof credentials.password !== 'string') {
-      throw new Error('Password is required and must be a string');
-    }
-
-    if (credentials.username.trim().length === 0) {
-      throw new Error('Username cannot be empty');
-    }
-
-    if (credentials.password.length === 0) {
-      throw new Error('Password cannot be empty');
-    }
-
-    // Basic validation for username format
-    if (credentials.username.length < 3) {
-      throw new Error('Username must be at least 3 characters long');
-    }
-
-    if (credentials.password.length < 6) {
-      throw new Error('Password must be at least 6 characters long');
-    }
-  }
-
-  /**
-   * Transform login response data
-   */
-  private transformLoginResponse(data: AuthResponse): AuthResponse {
-    // Validate required fields
-    if (!data.access || !data.refresh) {
-      throw new Error('Invalid authentication response: missing tokens');
-    }
-
-    if (!data.username || !data.id) {
-      throw new Error('Invalid authentication response: missing user data');
-    }
-
-    // Return normalized response
-    return {
-      id: data.id,
-      username: data.username,
-      access: data.access,
-      refresh: data.refresh,
-      first_name: data.first_name || null,
-      last_name: data.last_name || null,
-      role: data.role || 'admin',
-    };
   }
 
   /**
    * Clear local authentication state and stored tokens
    */
-  private clearLocalAuthState(): void {
+  clearLocalAuthState() {
     // Clear tokens from AuthManager
     authManager.clearTokens();
     
@@ -319,7 +200,7 @@ export class AuthService {
   /**
    * Handle authentication errors with proper error transformation
    */
-  private handleAuthError(error: any, defaultMessage: string): Error {
+  handleAuthError(error, defaultMessage) {
     if (error instanceof Error) {
       return error;
     }

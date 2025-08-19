@@ -1,4 +1,5 @@
 import AchievementPage from "@/pages/AchievementPage";
+import AdminLogin from "@/pages/AdminLogin";
 import CheckinPage from "@/pages/CheckinPage";
 import Dashboard from "@/pages/Dashboard";
 import HistoryPage from "@/pages/HistoryPage";
@@ -6,8 +7,10 @@ import HomePage from "@/pages/HomePage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import LuckySpinManagement from "@/pages/LuckySpinManagement";
 import LuckySpinPage from "@/pages/LuckySpinPage";
+import MemberLogin from "@/pages/MemberLogin";
 import ProfilePage from "@/pages/ProfilePage";
 import RedeemPage from "@/pages/RedeemPage";
+import TestPage from "@/pages/TestPage";
 import TournamentPage from "@/pages/TournamentPage";
 import UserProfile from "@/pages/UserProfile";
 import VipPage from "@/pages/VipPage";
@@ -18,6 +21,14 @@ const routes = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+  },
+  {
+    path: "/admin-login",
+    element: <AdminLogin />,
+  },
+  {
+    path: "/member-login",
+    element: <MemberLogin />,
   },
   {
     path: "/dashboard",
@@ -66,6 +77,10 @@ const routes = createBrowserRouter([
   {
     path: "/vip",
     element: <VipPage />,
+  },
+  {
+    path: "/test",
+    element: <TestPage />,
   },
 ]);
 

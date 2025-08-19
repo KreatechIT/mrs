@@ -1,35 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Cell } from 'recharts';
 import LeftSideBar from '@/components/shared/LeftSideBar';
+import { memberService } from '@/api/services/MemberService.js';
+import { authService } from '@/api/services/AuthService.js';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
     const totalPages = 35;
     const itemsPerPage = 15;
 
-    // Sample data for member activity
-    const memberData = [
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-        { name: 'johnB', lastLogin: '29 June, 2:44 PM', activeSection: 'Spin Wheel', timeSpent: '16 mins', vipTier: 'VIP 4' },
-    ];
+    // Check authentication on component mount
+    useEffect(() => {
+        const checkAuth = async () => {
+            if (!authService.isAuthenticated()) {
+                navigate('/admin-login');
+                return;
+            }
+            
+            try {
+                const isValid = await authService.verifyToken();
+                if (!isValid) {
+                    navigate('/admin-login');
+                    return;
+                }
+                
+                // Fetch members data
+                await fetchMembers();
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                navigate('/admin-login');
+            }
+        };
+
+        checkAuth();
+    }, [navigate]);
+
+    const fetchMembers = async () => {
+        try {
+            setLoading(true);
+            const membersData = await memberService.listMembers();
+            setMembers(membersData);
+            setError('');
+        } catch (err) {
+            setError('Failed to fetch members data');
+            console.error('Failed to fetch members:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Filter members based on search term
+    const filteredMembers = members.filter(member =>
+        member.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Transform member data for display
+    const memberData = filteredMembers.map(member => ({
+        name: member.username,
+        lastLogin: member.updated_at ? new Date(member.updated_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : 'N/A',
+        activeSection: 'Spin Wheel', // Default since API doesn't provide this
+        timeSpent: '16 mins', // Default since API doesn't provide this
+        vipTier: member.tier || 'N/A'
+    }));
 
     // Sample chart data - updated to match the image
     const chartData = [
@@ -190,6 +234,20 @@ const Dashboard = () => {
                     <h1 className="text-2xl font-bold">Home Dashboard</h1>
                     <div className="flex items-center space-x-4">
                         <Bell className="w-6 h-6 text-gray-400" />
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await authService.logout();
+                                    navigate('/admin-login');
+                                } catch (err) {
+                                    console.error('Logout failed:', err);
+                                    navigate('/admin-login');
+                                }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                        >
+                            Logout
+                        </button>
                         <div className="w-8 h-8 bg-gray-600 rounded-full"></div>
                     </div>
                 </div>

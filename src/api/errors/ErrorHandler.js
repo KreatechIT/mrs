@@ -3,37 +3,17 @@
  * Processes different error types and provides user-friendly messages
  */
 
-import type { 
-  APIError, 
-  NetworkError, 
-  AuthError, 
-  ValidationError, 
-  ServerError, 
-  BusinessError,
-  ErrorResponse 
-} from '../types';
-import { errorSettings, featureFlags } from '../config/settings';
-
-export type ErrorType = 'NETWORK_ERROR' | 'AUTH_ERROR' | 'VALIDATION_ERROR' | 'SERVER_ERROR' | 'BUSINESS_ERROR' | 'UNKNOWN_ERROR';
-
-export interface ProcessedError {
-  type: ErrorType;
-  message: string;
-  userMessage: string;
-  code?: string;
-  status?: number;
-  details?: any;
-  retryable: boolean;
-  requiresAuth: boolean;
-}
+import { errorSettings, featureFlags } from '../config/settings.js';
 
 export class ErrorHandler {
-  private errorListeners: Array<(error: ProcessedError) => void> = [];
+  constructor() {
+    this.errorListeners = [];
+  }
 
   /**
    * Process any error and return standardized error object
    */
-  processError(error: any): ProcessedError {
+  processError(error) {
     // Determine error type and process accordingly
     if (this.isNetworkError(error)) {
       return this.handleNetworkError(error);
@@ -62,8 +42,8 @@ export class ErrorHandler {
   /**
    * Handle network errors (connection issues, timeouts)
    */
-  handleNetworkError(error: NetworkError): ProcessedError {
-    const processedError: ProcessedError = {
+  handleNetworkError(error) {
+    const processedError = {
       type: 'NETWORK_ERROR',
       message: error.message || 'Network error occurred',
       userMessage: this.getUserFriendlyNetworkMessage(error),
@@ -83,10 +63,10 @@ export class ErrorHandler {
   /**
    * Handle authentication errors (401, 403)
    */
-  handleAuthError(error: AuthError | any): ProcessedError {
+  handleAuthError(error) {
     const status = error.status || error.response?.status;
     
-    const processedError: ProcessedError = {
+    const processedError = {
       type: 'AUTH_ERROR',
       message: error.message || 'Authentication error',
       userMessage: this.getUserFriendlyAuthMessage(status),
@@ -106,11 +86,11 @@ export class ErrorHandler {
   /**
    * Handle validation errors (400, 422)
    */
-  handleValidationError(error: ValidationError | any): ProcessedError {
+  handleValidationError(error) {
     const status = error.status || error.response?.status;
     const details = error.details || error.response?.data;
     
-    const processedError: ProcessedError = {
+    const processedError = {
       type: 'VALIDATION_ERROR',
       message: error.message || 'Validation error',
       userMessage: this.getUserFriendlyValidationMessage(details),
@@ -130,10 +110,10 @@ export class ErrorHandler {
   /**
    * Handle server errors (5xx)
    */
-  handleServerError(error: ServerError | any): ProcessedError {
+  handleServerError(error) {
     const status = error.status || error.response?.status;
     
-    const processedError: ProcessedError = {
+    const processedError = {
       type: 'SERVER_ERROR',
       message: error.message || 'Server error',
       userMessage: this.getUserFriendlyServerMessage(status),
@@ -153,8 +133,8 @@ export class ErrorHandler {
   /**
    * Handle business logic errors
    */
-  handleBusinessError(error: BusinessError | any): ProcessedError {
-    const processedError: ProcessedError = {
+  handleBusinessError(error) {
+    const processedError = {
       type: 'BUSINESS_ERROR',
       message: error.message || 'Business logic error',
       userMessage: error.message || 'An error occurred while processing your request',
@@ -174,8 +154,8 @@ export class ErrorHandler {
   /**
    * Handle unknown errors
    */
-  handleUnknownError(error: any): ProcessedError {
-    const processedError: ProcessedError = {
+  handleUnknownError(error) {
+    const processedError = {
       type: 'UNKNOWN_ERROR',
       message: error.message || 'Unknown error occurred',
       userMessage: 'An unexpected error occurred. Please try again.',
@@ -195,7 +175,7 @@ export class ErrorHandler {
   /**
    * Check if error is a network error
    */
-  private isNetworkError(error: any): boolean {
+  isNetworkError(error) {
     return (
       error.code === 'NETWORK_ERROR' ||
       error.code === 'ECONNABORTED' ||
@@ -210,7 +190,7 @@ export class ErrorHandler {
   /**
    * Check if error is an authentication error
    */
-  private isAuthError(error: any): boolean {
+  isAuthError(error) {
     const status = error.status || error.response?.status;
     return errorSettings.authErrorCodes.includes(status) || error.type === 'AUTH_ERROR';
   }
@@ -218,7 +198,7 @@ export class ErrorHandler {
   /**
    * Check if error is a validation error
    */
-  private isValidationError(error: any): boolean {
+  isValidationError(error) {
     const status = error.status || error.response?.status;
     return errorSettings.validationErrorCodes.includes(status) || error.type === 'VALIDATION_ERROR';
   }
@@ -226,7 +206,7 @@ export class ErrorHandler {
   /**
    * Check if error is a server error
    */
-  private isServerError(error: any): boolean {
+  isServerError(error) {
     const status = error.status || error.response?.status;
     return status >= 500 && status < 600;
   }
@@ -234,14 +214,14 @@ export class ErrorHandler {
   /**
    * Check if error is a business logic error
    */
-  private isBusinessError(error: any): boolean {
+  isBusinessError(error) {
     return error.type === 'BUSINESS_ERROR' || error.errorCode;
   }
 
   /**
    * Get user-friendly network error message
    */
-  private getUserFriendlyNetworkMessage(error: NetworkError): string {
+  getUserFriendlyNetworkMessage(error) {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       return 'Request timed out. Please check your connection and try again.';
     }
@@ -256,7 +236,7 @@ export class ErrorHandler {
   /**
    * Get user-friendly authentication error message
    */
-  private getUserFriendlyAuthMessage(status?: number): string {
+  getUserFriendlyAuthMessage(status) {
     switch (status) {
       case 401:
         return 'Your session has expired. Please log in again.';
@@ -270,7 +250,7 @@ export class ErrorHandler {
   /**
    * Get user-friendly validation error message
    */
-  private getUserFriendlyValidationMessage(details?: any): string {
+  getUserFriendlyValidationMessage(details) {
     if (details && typeof details === 'object') {
       // Try to extract field-specific errors
       const fieldErrors = this.extractFieldErrors(details);
@@ -290,7 +270,7 @@ export class ErrorHandler {
   /**
    * Get user-friendly server error message
    */
-  private getUserFriendlyServerMessage(status?: number): string {
+  getUserFriendlyServerMessage(status) {
     switch (status) {
       case 500:
         return 'Internal server error. Please try again later.';
@@ -308,8 +288,8 @@ export class ErrorHandler {
   /**
    * Extract field-specific error messages
    */
-  private extractFieldErrors(details: any): string[] {
-    const errors: string[] = [];
+  extractFieldErrors(details) {
+    const errors = [];
     
     if (details && typeof details === 'object') {
       Object.entries(details).forEach(([field, messages]) => {
@@ -329,7 +309,7 @@ export class ErrorHandler {
   /**
    * Log error with appropriate level
    */
-  private logError(processedError: ProcessedError, originalError: any): void {
+  logError(processedError, originalError) {
     if (!errorSettings.logErrors) {
       return;
     }
@@ -375,7 +355,7 @@ export class ErrorHandler {
   /**
    * Notify error listeners
    */
-  private notifyListeners(error: ProcessedError): void {
+  notifyListeners(error) {
     this.errorListeners.forEach(listener => {
       try {
         listener(error);
@@ -388,14 +368,14 @@ export class ErrorHandler {
   /**
    * Add error listener
    */
-  addErrorListener(listener: (error: ProcessedError) => void): void {
+  addErrorListener(listener) {
     this.errorListeners.push(listener);
   }
 
   /**
    * Remove error listener
    */
-  removeErrorListener(listener: (error: ProcessedError) => void): void {
+  removeErrorListener(listener) {
     const index = this.errorListeners.indexOf(listener);
     if (index > -1) {
       this.errorListeners.splice(index, 1);
@@ -405,14 +385,14 @@ export class ErrorHandler {
   /**
    * Clear all error listeners
    */
-  clearErrorListeners(): void {
+  clearErrorListeners() {
     this.errorListeners = [];
   }
 
   /**
    * Check if error should be retried
    */
-  shouldRetry(error: ProcessedError, attemptCount: number, maxAttempts: number): boolean {
+  shouldRetry(error, attemptCount, maxAttempts) {
     if (!featureFlags.enableAutoRetry) {
       return false;
     }
@@ -427,19 +407,14 @@ export class ErrorHandler {
   /**
    * Calculate retry delay with exponential backoff
    */
-  calculateRetryDelay(attemptCount: number, baseDelay: number = 1000): number {
+  calculateRetryDelay(attemptCount, baseDelay = 1000) {
     return baseDelay * Math.pow(2, attemptCount - 1);
   }
 
   /**
    * Create user notification for error
    */
-  createUserNotification(error: ProcessedError): {
-    type: 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    action?: string;
-  } {
+  createUserNotification(error) {
     const baseNotification = {
       message: error.userMessage,
     };
@@ -448,7 +423,7 @@ export class ErrorHandler {
       case 'NETWORK_ERROR':
         return {
           ...baseNotification,
-          type: 'warning' as const,
+          type: 'warning',
           title: 'Connection Issue',
           action: error.retryable ? 'Retry' : undefined,
         };
@@ -456,7 +431,7 @@ export class ErrorHandler {
       case 'AUTH_ERROR':
         return {
           ...baseNotification,
-          type: 'error' as const,
+          type: 'error',
           title: 'Authentication Required',
           action: 'Login',
         };
@@ -464,14 +439,14 @@ export class ErrorHandler {
       case 'VALIDATION_ERROR':
         return {
           ...baseNotification,
-          type: 'warning' as const,
+          type: 'warning',
           title: 'Invalid Input',
         };
       
       case 'SERVER_ERROR':
         return {
           ...baseNotification,
-          type: 'error' as const,
+          type: 'error',
           title: 'Server Error',
           action: error.retryable ? 'Retry' : undefined,
         };
@@ -479,14 +454,14 @@ export class ErrorHandler {
       case 'BUSINESS_ERROR':
         return {
           ...baseNotification,
-          type: 'info' as const,
+          type: 'info',
           title: 'Action Required',
         };
       
       default:
         return {
           ...baseNotification,
-          type: 'error' as const,
+          type: 'error',
           title: 'Error',
           action: 'Retry',
         };

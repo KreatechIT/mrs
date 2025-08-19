@@ -17,7 +17,7 @@ export const HTTP_STATUS = {
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
   GATEWAY_TIMEOUT: 504,
-} as const;
+};
 
 // Error Types
 export const ERROR_TYPES = {
@@ -26,7 +26,7 @@ export const ERROR_TYPES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   SERVER_ERROR: 'SERVER_ERROR',
   BUSINESS_ERROR: 'BUSINESS_ERROR',
-} as const;
+};
 
 // Request Methods
 export const HTTP_METHODS = {
@@ -35,14 +35,14 @@ export const HTTP_METHODS = {
   PUT: 'PUT',
   PATCH: 'PATCH',
   DELETE: 'DELETE',
-} as const;
+};
 
 // Content Types
 export const CONTENT_TYPES = {
   JSON: 'application/json',
   FORM_DATA: 'multipart/form-data',
   URL_ENCODED: 'application/x-www-form-urlencoded',
-} as const;
+};
 
 // Storage Keys
 export const STORAGE_KEYS = {
@@ -50,7 +50,7 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: 'mrs_refresh_token',
   USER_DATA: 'mrs_user_data',
   API_CACHE: 'mrs_api_cache',
-} as const;
+};
 
 // API Response Messages
 export const API_MESSAGES = {
@@ -61,7 +61,7 @@ export const API_MESSAGES = {
   VALIDATION_ERROR: 'Invalid data provided',
   SERVER_ERROR: 'Internal server error',
   NETWORK_ERROR: 'Network connection error',
-} as const;
+};
 
 // Retry Configuration
 export const RETRY_CONFIG = {
@@ -69,4 +69,4 @@ export const RETRY_CONFIG = {
   INITIAL_DELAY: 1000,
   DELAY_MULTIPLIER: 2,
   MAX_DELAY: 10000,
-} as const;
+};

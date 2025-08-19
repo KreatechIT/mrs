@@ -3,19 +3,17 @@
  * Environment-specific settings and feature flags
  */
 
-import type { APIClientConfig } from '../types';
-
 // Environment Detection
-export const isDevelopment = process.env.NODE_ENV === 'development';
-export const isProduction = process.env.NODE_ENV === 'production';
-export const isTest = process.env.NODE_ENV === 'test';
+export const isDevelopment = import.meta.env.MODE === 'development';
+export const isProduction = import.meta.env.MODE === 'production';
+export const isTest = import.meta.env.MODE === 'test';
 
 // API Client Configuration
-export const apiClientConfig: APIClientConfig = {
-  baseURL: process.env.VITE_API_BASE_URL || 'https://mrs-staging.onrender.com/api',
-  timeout: parseInt(process.env.VITE_API_TIMEOUT || '30000', 10),
-  retryAttempts: parseInt(process.env.VITE_API_RETRY_ATTEMPTS || '3', 10),
-  enableLogging: isDevelopment || process.env.VITE_API_ENABLE_LOGGING === 'true',
+export const apiClientConfig = {
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://staging-api.menangsininow.com',
+  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10),
+  retryAttempts: parseInt(import.meta.env.VITE_API_RETRY_ATTEMPTS || '3', 10),
+  enableLogging: isDevelopment || import.meta.env.VITE_API_ENABLE_LOGGING === 'true',
 };
 
 // Authentication Settings
@@ -25,7 +23,7 @@ export const authSettings = {
   tokenExpirationBuffer: 5 * 60 * 1000, // 5 minutes in milliseconds
   maxRefreshAttempts: 3,
   autoRefreshEnabled: true,
-} as const;
+};
 
 // Request Settings
 export const requestSettings = {
@@ -40,7 +38,7 @@ export const requestSettings = {
   maxRetries: 3,
   retryDelay: 1000, // 1 second
   retryDelayMultiplier: 2,
-} as const;
+};
 
 // Error Handling Settings
 export const errorSettings = {
@@ -49,19 +47,7 @@ export const errorSettings = {
   retryableStatusCodes: [408, 429, 500, 502, 503, 504],
   authErrorCodes: [401, 403],
   validationErrorCodes: [400, 422],
-} as const;
-
-// Cache Settings
-export const cacheSettings = {
-  enabled: true,
-  defaultTTL: 5 * 60 * 1000, // 5 minutes
-  maxCacheSize: 100,
-  cacheableEndpoints: [
-    '/lucky-spin-items/',
-    '/lucky-spin-sequences/',
-    '/members/',
-  ],
-} as const;
+};
 
 // Feature Flags
 export const featureFlags = {
@@ -72,13 +58,4 @@ export const featureFlags = {
   enableRequestCaching: true,
   enableAutoRetry: true,
   enableTokenRefresh: true,
-} as const;
-
-// Development Settings
-export const devSettings = {
-  mockApiResponses: false,
-  simulateNetworkDelay: false,
-  networkDelayMs: 1000,
-  simulateErrors: false,
-  errorRate: 0.1, // 10% error rate for testing
-} as const;
+};

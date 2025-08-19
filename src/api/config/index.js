@@ -4,7 +4,7 @@
  */
 
 // Endpoints configuration
-export * from './endpoints';
+export * from './endpoints.js';
 
 // Settings configuration
-export * from './settings';
+export * from './settings.js';

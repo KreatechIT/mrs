@@ -6,20 +6,15 @@ import UserLogs from "@/assets/images/icons/user-logs.png";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import SpinItemsIcon from "@/assets/images/icons/spin-items-panel.png";
 import ImageIcon from "@/assets/images/icons/image-upload.png";
+import { luckySpinItemsService } from "@/api/services/LuckySpinItemsService.js";
+import { authService } from "@/api/services/AuthService.js";
+import { memberService } from "@/api/services/MemberService.js";
 
-const spinItems = [
-    { name: "iPhone 16 Pro Max", image: "/src/assets/images/airpods.png" },
-    { name: "Gold Bar 5 Gram", image: "100" },
-    { name: "Free Bonus 1.88", image: "/src/assets/images/badges/tier-1.svg" },
-    { name: "Free Bonus 8.88", image: "100" },
-    { name: "Thank You", image: "100" },
-    { name: "Free Bonus 16.88", image: "100" },
-    { name: "Free Bonus 23.88", image: "100" },
-    { name: "MRS Point +3", image: "100" },
-];
+
 
 const topCards = [
     {
@@ -161,6 +156,71 @@ const LuckySpinManagement = () => {
     const [activeCard, setActiveCard] = useState(topCards[0].label);
     const [prizeSettings, setPrizeSettings] = useState(PRIZE_SETTINGS_DATA);
     const [year, setYear] = useState("2025");
+    const [spinItems, setSpinItems] = useState([]);
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
+
+    // Check authentication on component mount
+    useEffect(() => {
+        const checkAuth = async () => {
+            if (!authService.isAuthenticated()) {
+                navigate('/admin-login');
+                return;
+            }
+
+            try {
+                const isValid = await authService.verifyToken();
+                if (!isValid) {
+                    navigate('/admin-login');
+                    return;
+                }
+
+                // Fetch initial data
+                await fetchSpinItems();
+                await fetchMembers();
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                navigate('/admin-login');
+            }
+        };
+
+        checkAuth();
+    }, [navigate]);
+
+    const fetchSpinItems = async () => {
+        try {
+            setLoading(true);
+            const items = await luckySpinItemsService.listItems();
+            setSpinItems(items);
+            setError('');
+        } catch (err) {
+            setError('Failed to fetch spin items');
+            console.error('Failed to fetch spin items:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchMembers = async () => {
+        try {
+            const membersData = await memberService.listMembers();
+            setMembers(membersData);
+        } catch (err) {
+            console.error('Failed to fetch members:', err);
+        }
+    };
+
+    const handleDeleteItem = async (uuid) => {
+        try {
+            await luckySpinItemsService.archiveItem(uuid);
+            await fetchSpinItems(); // Refresh the list
+        } catch (err) {
+            setError('Failed to delete item');
+            console.error('Failed to delete item:', err);
+        }
+    };
 
     const handleCardClick = (label) => {
         setActiveCard(label);
@@ -171,7 +231,23 @@ const LuckySpinManagement = () => {
             <div className="flex min-h-screen bg-black">
                 <LeftSideBar />
                 <div className="flex-1 p-8">
-                    <h1 className="text-3xl font-bold text-white mb-6">Lucky Spin Management</h1>
+                    <div className="flex justify-between items-center mb-6">
+                        <h1 className="text-3xl font-bold text-white">Lucky Spin Management</h1>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await authService.logout();
+                                    navigate('/admin-login');
+                                } catch (err) {
+                                    console.error('Logout failed:', err);
+                                    navigate('/admin-login');
+                                }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
+                        >
+                            Logout
+                        </button>
+                    </div>
                     <div className="grid grid-cols-4 gap-6 mb-8">
                         {topCards.map((card) => (
                             <button
@@ -280,26 +356,56 @@ const LuckySpinManagement = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {spinItems.map((item, idx) => (
-                                        <tr key={idx} className="border-b border-gray-800 bg-gray-900">
-                                            <td className="py-3 px-4 text-gray-200 text-left">
-                                                {item.name}
-                                            </td>
-                                            <td className="py-3 px-4 text-center">
-                                                <div className="flex items-center justify-center h-full">
-                                                    {item.image.endsWith('.png') || item.image.endsWith('.svg') ? (
-                                                        <img src={item.image} alt={item.name} className="h-10 object-contain" />
-                                                    ) : (
-                                                        <span className="text-gray-400">{item.image}</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <button className="bg-green-500 text-white px-4 py-1 rounded mr-2" onClick={() => { setEditData(item); setEditOpen(true); }}>Edit</button>
-                                                <button className="bg-black border border-red-400 text-red-500 px-4 py-1 rounded">Delete</button>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="3" className="py-8 text-center text-gray-400">
+                                                Loading spin items...
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : error ? (
+                                        <tr>
+                                            <td colSpan="3" className="py-8 text-center text-red-400">
+                                                {error}
+                                            </td>
+                                        </tr>
+                                    ) : spinItems.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" className="py-8 text-center text-gray-400">
+                                                No spin items found
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        spinItems.map((item, idx) => (
+                                            <tr key={item.uuid || idx} className="border-b border-gray-800 bg-gray-900">
+                                                <td className="py-3 px-4 text-gray-200 text-left">
+                                                    {item.reward_name}
+                                                </td>
+                                                <td className="py-3 px-4 text-center">
+                                                    <div className="flex items-center justify-center h-full">
+                                                        {item.image && (item.image.endsWith('.png') || item.image.endsWith('.svg') || item.image.endsWith('.jpg') || item.image.endsWith('.jpeg')) ? (
+                                                            <img src={item.image} alt={item.reward_name} className="h-10 object-contain" />
+                                                        ) : (
+                                                            <span className="text-gray-400">No Image</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4 text-right">
+                                                    <button
+                                                        className="bg-green-500 text-white px-4 py-1 rounded mr-2"
+                                                        onClick={() => { setEditData(item); setEditOpen(true); }}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        className="bg-black border border-red-400 text-red-500 px-4 py-1 rounded"
+                                                        onClick={() => handleDeleteItem(item.uuid)}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

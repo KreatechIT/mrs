@@ -5,7 +5,7 @@ import MainNav from "@/components/shared/MainNav";
 import Avatar from "@/assets/images/profile/avatar.png";
 import Transaction from "@/assets/images/icons/transaction.png";
 import Badge from "@/assets/images/icons/badge.png";
-import Leaderboard from "@/assets/images/icons/leaderboard.png";
+import Leaderboard from "@/assets/images/icons/leaderBoard.png";
 import Crown from "@/assets/images/icons/crown.png";
 import Logout from "@/assets/images/icons/logout.png";
 

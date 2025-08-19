@@ -3,4 +3,4 @@
  * Exports all client-related functionality
  */
 
-export { APIClient, apiClient } from './APIClient';
+export { APIClient, apiClient } from './APIClient.js';
